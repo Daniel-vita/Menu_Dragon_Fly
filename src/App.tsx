@@ -20,10 +20,25 @@ import {
 import { MENU_DATA, Category, Product, SERVICE_CHARGE } from './data';
 
 const MENU_STORAGE_KEY = 'dragonfly-menu-data-v1';
+const IMAGE_UPLOAD_HELPER_URL = 'https://postimages.org/';
 
 const cloneMenuData = (data: Category[]): Category[] => JSON.parse(JSON.stringify(data));
 
 const createId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+type NetlifyIdentityApi = {
+  init: () => void;
+  on: (event: string, callback: (user?: unknown) => void) => void;
+  currentUser: () => unknown | null;
+  open: (panel?: string) => void;
+  logout: () => void;
+};
+
+declare global {
+  interface Window {
+    netlifyIdentity?: NetlifyIdentityApi;
+  }
+}
 
 // --- Components ---
 
@@ -265,7 +280,7 @@ const ProductCard = ({ product }: { product: Product }) => {
   );
 };
 
-const Sidebar = ({ isOpen, onClose, categories, onCategorySelect, onContactClick, onAdminClick }: { isOpen: boolean; onClose: () => void; categories: Category[]; onCategorySelect: (cat: Category) => void; onContactClick: () => void; onAdminClick: () => void }) => (
+const Sidebar = ({ isOpen, onClose, categories, onCategorySelect, onContactClick }: { isOpen: boolean; onClose: () => void; categories: Category[]; onCategorySelect: (cat: Category) => void; onContactClick: () => void }) => (
   <AnimatePresence>
     {isOpen && (
       <>
@@ -311,15 +326,6 @@ const Sidebar = ({ isOpen, onClose, categories, onCategorySelect, onContactClick
           <div className="space-y-4 pt-8 border-t border-gold/10">
             <button
               onClick={() => {
-                onAdminClick();
-                onClose();
-              }}
-              className="w-full flex items-center gap-4 text-lg text-beige hover:text-gold transition-colors text-left"
-            >
-              Gestisci Menu
-            </button>
-            <button
-              onClick={() => {
                 onContactClick();
                 onClose();
               }}
@@ -347,12 +353,14 @@ const AdminPanel = ({
   categories,
   onSave,
   onResetDefaults,
+  onLogout,
 }: {
   isOpen: boolean;
   onClose: () => void;
   categories: Category[];
   onSave: (nextData: Category[]) => void;
   onResetDefaults: () => void;
+  onLogout: () => void;
 }) => {
   const [draft, setDraft] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
@@ -470,9 +478,17 @@ const AdminPanel = ({
           >
             <div className="px-4 md:px-6 py-3 border-b border-gold/15 flex items-center justify-between">
               <h2 className="vintage-title text-gold text-xl md:text-2xl">Gestione Menu</h2>
-              <button onClick={onClose} className="p-2 rounded-lg hover:bg-wood-light/20 transition-colors" aria-label="Chiudi pannello admin">
-                <X className="w-5 h-5 text-gold" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={onLogout}
+                  className="px-3 py-1.5 border border-gold/25 rounded-lg text-xs uppercase tracking-wider text-beige hover:text-gold transition-colors"
+                >
+                  Logout
+                </button>
+                <button onClick={onClose} className="p-2 rounded-lg hover:bg-wood-light/20 transition-colors" aria-label="Chiudi pannello admin">
+                  <X className="w-5 h-5 text-gold" />
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5">
@@ -512,6 +528,14 @@ const AdminPanel = ({
                       className="bg-wood-medium/20 border border-gold/20 rounded-lg px-3 py-2 text-beige"
                       placeholder="URL immagine categoria"
                     />
+                    <a
+                      href={IMAGE_UPLOAD_HELPER_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="md:col-span-2 text-xs text-gold/80 hover:text-gold transition-colors"
+                    >
+                      Carica immagine e incolla URL
+                    </a>
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -558,6 +582,14 @@ const AdminPanel = ({
                             className="md:col-span-2 bg-wood-dark/40 border border-gold/15 rounded-lg px-3 py-2 text-beige"
                             placeholder="URL foto prodotto"
                           />
+                          <a
+                            href={IMAGE_UPLOAD_HELPER_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="md:col-span-3 text-xs text-gold/80 hover:text-gold transition-colors"
+                          >
+                            Carica foto prodotto e incolla URL
+                          </a>
                         </div>
                         <input
                           value={product.allergens?.join(', ') || ''}
@@ -603,7 +635,47 @@ export default function App() {
   const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const isAdminRoute =
+    typeof window !== 'undefined' &&
+    (window.location.pathname === '/admin' || new URLSearchParams(window.location.search).get('admin') === '1');
+
+  useEffect(() => {
+    const identity = window.netlifyIdentity;
+    if (!identity) {
+      setIsAuthReady(true);
+      return;
+    }
+
+    identity.init();
+    setIsAuthenticated(!!identity.currentUser());
+    setIsAuthReady(true);
+
+    if (identity.currentUser() && isAdminRoute) {
+      setIsAdminOpen(true);
+    }
+
+    identity.on('login', () => {
+      setIsAuthenticated(true);
+      if (isAdminRoute) {
+        setIsAdminOpen(true);
+      }
+    });
+
+    identity.on('logout', () => {
+      setIsAuthenticated(false);
+      setIsAdminOpen(false);
+    });
+  }, [isAdminRoute]);
+
+  useEffect(() => {
+    if (!isAuthReady || !isAdminRoute || isAuthenticated) return;
+    const identity = window.netlifyIdentity;
+    identity?.open('login');
+  }, [isAuthReady, isAdminRoute, isAuthenticated]);
 
   useEffect(() => {
     try {
@@ -661,6 +733,16 @@ export default function App() {
     }, 150);
   };
 
+  const logoutAdmin = () => {
+    const identity = window.netlifyIdentity;
+    if (identity) {
+      identity.logout();
+      return;
+    }
+    setIsAuthenticated(false);
+    setIsAdminOpen(false);
+  };
+
   // Scroll to top when category changes
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -696,11 +778,10 @@ export default function App() {
         categories={menuData}
         onCategorySelect={setCurrentCategory}
         onContactClick={goToContactSection}
-        onAdminClick={() => setIsAdminOpen(true)}
       />
 
       <AdminPanel
-        isOpen={isAdminOpen}
+        isOpen={isAdminOpen && isAuthenticated && isAdminRoute}
         onClose={() => setIsAdminOpen(false)}
         categories={menuData}
         onSave={(nextData) => setMenuData(nextData)}
@@ -710,6 +791,7 @@ export default function App() {
           setSearchQuery('');
           setIsAdminOpen(false);
         }}
+        onLogout={logoutAdmin}
       />
 
       <main className="pt-16">
@@ -746,15 +828,14 @@ export default function App() {
                   </div>
 
                   <div className="text-right">
-                    <a href="#" className="text-[11px] md:text-xs uppercase tracking-[0.14em] text-beige/70 hover:text-gold transition-colors">Credits</a>
-                    <div className="mt-1.5 flex items-center justify-end gap-2">
+                    <a href="#" className="text-[11px] md:text-xs uppercase tracking-[0.16em] text-beige/65 hover:text-gold transition-colors">Credits</a>
+                    <div className="mt-2 flex items-center justify-end pr-0 md:pr-0 -mr-2 md:-mr-3">
                       <img
-                        src="/dragonfly-logo.png"
+                        src="/Scritta_Logo-NoSfondo.webp"
                         alt="Credits logo"
-                        className="w-5 h-5 object-contain opacity-80"
+                        className="h-8 md:h-9 w-auto max-w-[170px] object-contain opacity-100"
                         referrerPolicy="no-referrer"
                       />
-                      <span className="text-[10px] md:text-[11px] text-beige/55 uppercase tracking-[0.12em]">Dragonfly Studio</span>
                     </div>
                   </div>
                 </div>
