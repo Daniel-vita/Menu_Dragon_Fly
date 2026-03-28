@@ -27,7 +27,7 @@ const cloneMenuData = (data: Category[]): Category[] => JSON.parse(JSON.stringif
 const createId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
 type NetlifyIdentityApi = {
-  init: () => void;
+  init: (options?: Record<string, unknown>) => void;
   on: (event: string, callback: (user?: unknown) => void) => void;
   currentUser: () => unknown | null;
   open: (panel?: string) => void;
@@ -632,10 +632,12 @@ const AdminAccessGate = ({
   isAuthReady,
   hasIdentity,
   onOpenLogin,
+  onOpenRecovery,
 }: {
   isAuthReady: boolean;
   hasIdentity: boolean;
   onOpenLogin: () => void;
+  onOpenRecovery: () => void;
 }) => (
   <div className="fixed inset-0 z-[85] bg-black/75 backdrop-blur-sm flex items-center justify-center px-4">
     <div className="w-full max-w-md rounded-2xl border border-gold/25 bg-wood-dark p-6 md:p-7 card-shadow">
@@ -645,13 +647,22 @@ const AdminAccessGate = ({
       </p>
 
       {hasIdentity ? (
-        <button
-          onClick={onOpenLogin}
-          className="w-full rounded-xl bg-gold text-wood-dark py-3 font-semibold uppercase tracking-wider text-sm hover:bg-accent-orange transition-colors"
-          disabled={!isAuthReady}
-        >
-          {isAuthReady ? 'Apri Login' : 'Caricamento...'}
-        </button>
+        <div className="space-y-3">
+          <button
+            onClick={onOpenLogin}
+            className="w-full rounded-xl bg-gold text-wood-dark py-3 font-semibold uppercase tracking-wider text-sm hover:bg-accent-orange transition-colors"
+            disabled={!isAuthReady}
+          >
+            {isAuthReady ? 'Apri Login' : 'Caricamento...'}
+          </button>
+          <button
+            onClick={onOpenRecovery}
+            className="w-full rounded-xl border border-gold/35 text-gold py-3 font-semibold uppercase tracking-wider text-sm hover:bg-gold/10 transition-colors"
+            disabled={!isAuthReady}
+          >
+            Reimposta Password
+          </button>
+        </div>
       ) : (
         <div className="rounded-xl border border-red-300/35 bg-red-500/10 px-4 py-3 text-sm text-red-100">
           Login non disponibile: il widget Netlify Identity non e stato caricato.
@@ -659,7 +670,7 @@ const AdminAccessGate = ({
       )}
 
       <p className="mt-4 text-xs text-beige/55">
-        Se hai chiuso il popup o non compare il campo password, premi di nuovo "Apri Login".
+        Se non hai mai impostato la password, premi "Reimposta Password" e usa il link email ricevuto.
       </p>
     </div>
   </div>
@@ -687,7 +698,14 @@ export default function App() {
     authHashParams?.get('confirmation_token') ||
     authQueryParams?.get('confirmation_token')
   );
-  const hasRecoveryToken = !!(authHashParams?.get('recovery_token') || authQueryParams?.get('recovery_token'));
+  const hasRecoveryToken = !!(
+    authHashParams?.get('recovery_token') ||
+    authQueryParams?.get('recovery_token') ||
+    authHashParams?.get('token') ||
+    authQueryParams?.get('token') ||
+    authHashParams?.get('type') === 'recovery' ||
+    authQueryParams?.get('type') === 'recovery'
+  );
 
   const isAdminRoute = typeof window !== 'undefined' && normalizedPath === '/peppoo7';
   const hasIdentity = typeof window !== 'undefined' && !!window.netlifyIdentity;
@@ -749,6 +767,16 @@ export default function App() {
     
     console.log('Opening Netlify Identity login form');
     identity.open('login');
+  };
+
+  const openAdminRecovery = () => {
+    const identity = window.netlifyIdentity;
+    if (!identity) {
+      alert('Recupero password non disponibile. Ricarica la pagina.');
+      return;
+    }
+
+    identity.open('recovery');
   };
 
   useEffect(() => {
@@ -876,6 +904,7 @@ export default function App() {
           isAuthReady={isAuthReady}
           hasIdentity={hasIdentity}
           onOpenLogin={openAdminLogin}
+          onOpenRecovery={openAdminRecovery}
         />
       )}
 
