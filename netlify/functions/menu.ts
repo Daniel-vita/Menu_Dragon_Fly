@@ -1,5 +1,6 @@
 import { getStore } from "@netlify/blobs";
 import type { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
+import { Buffer } from "node:buffer";
 
 export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
   const headers = {
@@ -8,47 +9,54 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   };
 
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
-  }
+  try {
+    if (event.httpMethod === 'OPTIONS') {
+      return { statusCode: 200, headers, body: '' };
+    }
 
-  const store = getStore("dragonfly-menu");
+    const store = getStore("dragonfly-menu");
 
-  if (event.httpMethod === "GET") {
-    try {
+    if (event.httpMethod === "GET") {
       const data = await store.get("latest", { type: 'json' });
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify(data || null)
       };
-    } catch (e: any) {
-      console.error(e);
-      return { statusCode: 500, headers, body: JSON.stringify({ error: 'Store read error', details: e.message }) };
-    }
-  }
-
-  if (event.httpMethod === "POST") {
-    // Check if user is logged in via Netlify Identity
-    const user = context.clientContext?.user;
-    if (!user) {
-      return { statusCode: 401, headers, body: JSON.stringify({ error: "Unauthorized - Bearer token missing, invalid or expired" }) };
     }
 
-    try {
+    if (event.httpMethod === "POST") {
+      const user = context.clientContext?.user;
+      if (!user) {
+        return { statusCode: 401, headers, body: JSON.stringify({ error: "Unauthorized - Bearer token missing, invalid or expired" }) };
+      }
+
       const rawBody = event.isBase64Encoded ? Buffer.from(event.body || "", 'base64').toString('utf-8') : (event.body || "[]");
       const parsedBody = JSON.parse(rawBody);
-      await store.setJSON("latest", parsedBody);
+
+      // Wrapper to prevent HTTP 502 timeout limit (10s on Netlify defaults)
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Netlify Blobs timeout after 6 seconds")), 6000));
+      await Promise.race([store.setJSON("latest", parsedBody), timeoutPromise]);
+
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({ success: true, message: "Menu saved successfully" })
       };
-    } catch (e: any) {
-      console.error(e);
-      return { statusCode: 500, headers, body: JSON.stringify({ error: 'Store write error', details: e.message }) };
     }
-  }
 
-  return { statusCode: 405, headers, body: "Method Not Allowed" };
+    return { statusCode: 405, headers, body: "Method Not Allowed" };
+  } catch (e: any) {
+    console.error("FATAL ERROR IN HANDLER:", e);
+    return { 
+      statusCode: 500, 
+      headers, 
+      body: JSON.stringify({ 
+        error: 'Fatal server error', 
+        name: e.name,
+        message: e.message,
+        stack: e.stack ? e.stack.split('\n')[0] : ""
+      }) 
+    };
+  }
 };
