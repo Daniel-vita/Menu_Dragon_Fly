@@ -847,13 +847,11 @@ export default function App() {
 
   const authHashParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.hash.replace(/^#/, '')) : null;
   const authQueryParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-  const hasInviteToken = !!(
+  const hasAuthToken = !!(
     authHashParams?.get('invite_token') ||
     authQueryParams?.get('invite_token') ||
     authHashParams?.get('confirmation_token') ||
-    authQueryParams?.get('confirmation_token')
-  );
-  const hasRecoveryToken = !!(
+    authQueryParams?.get('confirmation_token') ||
     authHashParams?.get('recovery_token') ||
     authQueryParams?.get('recovery_token') ||
     authHashParams?.get('token') ||
@@ -881,14 +879,9 @@ export default function App() {
       console.error('Failed to initialize Netlify Identity:', err);
     }
     setIsAuthReady(true);
-
-    if (hasInviteToken) {
-      identity.open('signup');
-    }
-    if (hasRecoveryToken) {
-      identity.open('recovery');
-    }
-
+    
+    // Netlify Identity widget automatically reads `#invite_token` and `#recovery_token` and pops up natively.
+    // If the user already has session and route is admin, open admin immediately.
     if (identity.currentUser() && isAdminRoute) {
       setIsAdminOpen(true);
     }
@@ -904,13 +897,15 @@ export default function App() {
       setIsAuthenticated(false);
       setIsAdminOpen(false);
     });
-  }, [isAdminRoute, hasInviteToken, hasRecoveryToken]);
+  }, [isAdminRoute]);
 
   useEffect(() => {
-    if (!isAuthReady || !isAdminRoute || isAuthenticated || hasInviteToken || hasRecoveryToken) return;
+    if (!isAuthReady || !isAdminRoute || isAuthenticated || hasAuthToken) return;
     const identity = window.netlifyIdentity;
-    identity?.open('login');
-  }, [isAuthReady, isAdminRoute, isAuthenticated, hasInviteToken, hasRecoveryToken]);
+    if (identity && !identity.currentUser()) {
+       identity.open('login');
+    }
+  }, [isAuthReady, isAdminRoute, isAuthenticated, hasAuthToken]);
 
   const openAdminLogin = () => {
     const identity = window.netlifyIdentity;
