@@ -11,6 +11,22 @@
   <body>
     <div id="root"></div>
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <script>
+      // Initialize Netlify Identity widget with site configuration
+      if (window.netlifyIdentity) {
+        // Extract site name from current domain or use default
+        const hostname = window.location.hostname;
+        const siteId = hostname.includes('netlify.app') ? 
+          hostname.split('.')[0] : 
+          'dragonflyenu';
+        
+        // Configure the widget
+        window.netlifyIdentity.init({
+          container: '#root',
+          onError: console.error
+        });
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

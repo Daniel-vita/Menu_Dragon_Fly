@@ -695,12 +695,18 @@ export default function App() {
   useEffect(() => {
     const identity = window.netlifyIdentity;
     if (!identity) {
+      console.warn('Netlify Identity widget not loaded');
       setIsAuthReady(true);
       return;
     }
 
-    identity.init();
-    setIsAuthenticated(!!identity.currentUser());
+    try {
+      identity.init();
+      setIsAuthenticated(!!identity.currentUser());
+      console.log('Netlify Identity initialized successfully');
+    } catch (err) {
+      console.error('Failed to initialize Netlify Identity:', err);
+    }
     setIsAuthReady(true);
 
     if (hasInviteToken) {
@@ -734,7 +740,15 @@ export default function App() {
   }, [isAuthReady, isAdminRoute, isAuthenticated, hasInviteToken, hasRecoveryToken]);
 
   const openAdminLogin = () => {
-    window.netlifyIdentity?.open('login');
+    const identity = window.netlifyIdentity;
+    if (!identity) {
+      console.error('Netlify Identity widget not available');
+      alert('Login non disponibile. Ricarica la pagina.');
+      return;
+    }
+    
+    console.log('Opening Netlify Identity login form');
+    identity.open('login');
   };
 
   useEffect(() => {
@@ -883,17 +897,17 @@ export default function App() {
                   <div id="contattaci" className="text-left">
                     <a href="#" className="text-[11px] md:text-xs uppercase tracking-[0.14em] text-beige/80 hover:text-gold transition-colors">Contattaci</a>
                     <div className="mt-1.5 text-[11px] md:text-xs text-beige/70 leading-tight space-y-0.5">
-                      <p>+39 06 1234 5678</p>
+                      <p>+39 389 598 1018</p>
                       <p>+39 333 123 4567</p>
                       <p>info@dragonflypub.it</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3 text-gold/80">
-                    <a href="#" className="hover:text-gold transition-colors" aria-label="Instagram">
+                    <a href="https://www.instagram.com/dragonfly_genuinepub/" className="hover:text-gold transition-colors" aria-label="Instagram">
                       <Instagram className="w-3.5 h-3.5" />
                     </a>
-                    <a href="#" className="hover:text-gold transition-colors" aria-label="Facebook">
+                    <a href="https://www.facebook.com/dragonflylivemusicpub" className="hover:text-gold transition-colors" aria-label="Facebook">
                       <Facebook className="w-3.5 h-3.5" />
                     </a>
                   </div>
