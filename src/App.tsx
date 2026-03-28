@@ -26,10 +26,15 @@ const cloneMenuData = (data: Category[]): Category[] => JSON.parse(JSON.stringif
 
 const createId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
+type NetlifyIdentityUser = {
+  jwt: (forceUpdate?: boolean) => Promise<string>;
+  token?: { access_token: string };
+};
+
 type NetlifyIdentityApi = {
   init: (options?: Record<string, unknown>) => void;
   on: (event: string, callback: (user?: unknown) => void) => void;
-  currentUser: () => unknown | null;
+  currentUser: () => NetlifyIdentityUser | null;
   open: (panel?: string) => void;
   logout: () => void;
 };
@@ -923,21 +928,21 @@ export default function App() {
   };
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(MENU_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        setMenuData(parsed);
+    const fetchMenu = async () => {
+      try {
+        const res = await fetch('/.netlify/functions/menu');
+        if (res.ok) {
+          const parsed = await res.json();
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setMenuData(parsed);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load remote menu', err);
       }
-    } catch {
-      // Keep defaults if storage is invalid.
-    }
+    };
+    fetchMenu();
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem(MENU_STORAGE_KEY, JSON.stringify(menuData));
-  }, [menuData]);
 
   useEffect(() => {
     if (!currentCategory) return;
@@ -1032,7 +1037,28 @@ export default function App() {
         isOpen={isAdminOpen && isAuthenticated && isAdminRoute}
         onClose={() => setIsAdminOpen(false)}
         categories={menuData}
-        onSave={(nextData) => setMenuData(nextData)}
+        onSave={async (nextData) => {
+          setMenuData(nextData);
+          try {
+            const token = await window.netlifyIdentity?.currentUser()?.jwt();
+            const res = await fetch('/.netlify/functions/menu', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+              },
+              body: JSON.stringify(nextData)
+            });
+            if (res.ok) {
+              alert('✅ Nuovo menù pubblicato istantaneamente per tutti i clienti!');
+            } else {
+              alert('Attenzione: Salvataggio Cloud fallito (' + res.status + '). Riprova.');
+            }
+          } catch (e) {
+            console.error(e);
+            alert('Errore di connessione server durante il salvataggio.');
+          }
+        }}
         onResetDefaults={() => {
           setMenuData(cloneMenuData(MENU_DATA));
           setCurrentCategory(null);
