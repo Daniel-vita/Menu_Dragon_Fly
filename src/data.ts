@@ -8,6 +8,12 @@ export interface ProductAddon {
   price: string;
 }
 
+export interface ProductAddonGroup {
+  id: string;
+  name: string;
+  options: ProductAddon[];
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -15,9 +21,49 @@ export interface Product {
   price?: string;
   prices?: ProductPrice[];
   addons?: ProductAddon[];
+  addonGroups?: ProductAddonGroup[];
   image: string;
   allergens?: string[];
 }
+
+export const PIADINA_ADDON_GROUPS: ProductAddonGroup[] = [
+  {
+    id: 'carne',
+    name: 'Carne',
+    options: [
+      { name: 'Prosciutto crudo', price: '+2.00€' },
+      { name: 'Salsiccia', price: '+2.20€' },
+      { name: 'Speck', price: '+2.00€' }
+    ]
+  },
+  {
+    id: 'formaggi',
+    name: 'Formaggi',
+    options: [
+      { name: 'Squacquerone', price: '+1.50€' },
+      { name: 'Mozzarella', price: '+1.20€' },
+      { name: 'Scamorza', price: '+1.40€' }
+    ]
+  },
+  {
+    id: 'verdure',
+    name: 'Verdure',
+    options: [
+      { name: 'Rucola', price: '+0.80€' },
+      { name: 'Peperoni', price: '+1.00€' },
+      { name: 'Cipolla', price: '+0.70€' }
+    ]
+  },
+  {
+    id: 'salse',
+    name: 'Salse',
+    options: [
+      { name: 'Maionese', price: '+0.50€' },
+      { name: 'Salsa BBQ', price: '+0.70€' },
+      { name: 'Salsa piccante', price: '+0.70€' }
+    ]
+  }
+];
 
 export const SERVICE_CHARGE = "2.00€";
 
@@ -73,14 +119,44 @@ export const MENU_DATA: Category[] = [
         description: "Base piadina da comporre come vuoi: scegli gli extra qui sotto.",
         price: "5.00€",
         image: "https://pixabay.com/get/g189a821c8f564141566b04d456fba53a9da8072efa9fb5d96e5848ba86993a8006208c5b174b2cb3c9247922fdea30d1_1920.jpg",
-        addons: [
-          { name: "Prosciutto crudo", price: "+2.00€" },
-          { name: "Squacquerone", price: "+1.50€" },
-          { name: "Rucola", price: "+0.80€" },
-          { name: "Salsiccia", price: "+2.20€" },
-          { name: "Peperoni", price: "+1.00€" },
-          { name: "Cipolla", price: "+0.70€" }
-        ]
+        addonGroups: PIADINA_ADDON_GROUPS
+      }
+    ]
+  },
+  {
+    id: "pinse",
+    name: "Pinse",
+    icon: "🍕",
+    image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=800",
+    products: [
+      {
+        id: "pn1",
+        name: "Pinsa Margherita",
+        description: "Pomodoro, mozzarella e basilico.",
+        price: "8.50€",
+        image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=800"
+      },
+      {
+        id: "pn2",
+        name: "Pinsa Prosciutto e Rucola",
+        description: "Mozzarella, prosciutto crudo e rucola fresca.",
+        price: "10.00€",
+        image: "https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?auto=format&fit=crop&q=80&w=800"
+      }
+    ]
+  },
+  {
+    id: "patane-paesane",
+    name: "Patane Paesane",
+    icon: "🥔",
+    image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&q=80&w=800",
+    products: [
+      {
+        id: "pp1",
+        name: "patane Paesane",
+        description: "patane paesane croccanti, servite calde.",
+        price: "5.00€",
+        image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&q=80&w=800"
       }
     ]
   },
@@ -92,7 +168,7 @@ export const MENU_DATA: Category[] = [
     products: [
       {
         id: "f1",
-        name: "Patatine Rustiche",
+        name: "patane Rustiche",
         description: "Patate fritte con buccia, sale marino e rosmarino.",
         price: "4.50€",
         image: "https://images.unsplash.com/photo-1573016608464-54269945138e?auto=format&fit=crop&q=80&w=800"
@@ -107,7 +183,7 @@ export const MENU_DATA: Category[] = [
       {
         id: "f3",
         name: "Mix Fritti",
-        description: "Patatine, anelli di cipolla, mozzarelline, crocchette.",
+        description: "patane, anelli di cipolla, mozzarelline, crocchette.",
         price: "9.50€",
         image: "https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&q=80&w=800"
       }
@@ -137,7 +213,7 @@ export const MENU_DATA: Category[] = [
   },
   {
     id: "birre",
-    name: "Birre",
+    name: "Birre in Bottiglia",
     icon: "🍺",
     image: "https://pixabay.com/get/g967922e805207d7d741431846cd6e020bc4ffdc37271bcb76a900cb0f8365224266b278122f4a8b9a48f05e71e032869_1920.jpg",
     products: [
@@ -166,7 +242,7 @@ export const MENU_DATA: Category[] = [
   },
   {
     id: "birre-artigianali",
-    name: "Birre Artigianali",
+    name: "Birre alla Spina",
     icon: "🍻",
     image: "https://pixabay.com/get/g30fe19f5f64efddafbe3c251076331bd21c937244b1ae1989c02b1a2ae7608e1db602750e6eb040f35afbe787d51f42d_1920.jpg",
     products: [
@@ -203,14 +279,14 @@ export const MENU_DATA: Category[] = [
         name: "Coca Cola",
         description: "33cl in vetro.",
         price: "3.50€",
-        image: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "bi2",
         name: "Acqua Naturale/Frizzante",
         description: "50cl.",
         price: "1.50€",
-        image: "https://images.unsplash.com/photo-1523362628744-0c100150b504?auto=format&fit=crop&q=80&w=800"
+        image: ""
       }
     ]
   },
@@ -247,14 +323,14 @@ export const MENU_DATA: Category[] = [
         name: "Amaro del Capo",
         description: "Ghiacciato.",
         price: "4.00€",
-        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "a2",
         name: "Grappa Barricata",
         description: "Invecchiata in botti di rovere.",
         price: "5.00€",
-        image: "https://images.unsplash.com/photo-1516733968668-dbdce39c46ef?auto=format&fit=crop&q=80&w=800"
+        image: ""
       }
     ]
   }

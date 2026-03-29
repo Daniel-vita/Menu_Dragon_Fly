@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Menu, 
@@ -17,7 +17,7 @@ import {
   Phone,
   AlertCircle
 } from 'lucide-react';
-import { MENU_DATA, Category, Product, ProductAddon, SERVICE_CHARGE } from './data';
+import { MENU_DATA, Category, Product, ProductAddon, ProductAddonGroup, PIADINA_ADDON_GROUPS, SERVICE_CHARGE } from './data';
 
 const MENU_STORAGE_KEY = 'dragonfly-menu-data-v1';
 const IMAGE_UPLOAD_HELPER_URL = 'https://postimages.org/';
@@ -25,6 +25,60 @@ const IMAGE_UPLOAD_HELPER_URL = 'https://postimages.org/';
 const cloneMenuData = (data: Category[]): Category[] => JSON.parse(JSON.stringify(data));
 
 const createId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+const clonePiadinaAddonGroups = (): ProductAddonGroup[] =>
+  PIADINA_ADDON_GROUPS.map((group) => ({
+    ...group,
+    options: group.options.map((option) => ({ ...option })),
+  }));
+
+const normalizePiadinaAddonGroups = (product: Product): ProductAddonGroup[] => {
+  if (product.addonGroups?.length) {
+    return product.addonGroups.map((group) => ({
+      id: group.id,
+      name: group.name,
+      options: (group.options || []).map((option) => ({ ...option })),
+    }));
+  }
+
+  const groups = clonePiadinaAddonGroups();
+  const fallbackAddons = product.addons || [];
+  if (!fallbackAddons.length) {
+    return groups;
+  }
+
+  const matchers: Record<string, RegExp> = {
+    carne: /(prosciutto|salsiccia|speck|salame|wurstel|bresaola)/i,
+    formaggi: /(squacquerone|mozzarella|scamorza|formagg|gorgonzola|stracchino|brie)/i,
+    verdure: /(rucola|peperoni|cipolla|verdur|zucchine|insalata|pomodoro|melanzane|funghi)/i,
+    salse: /(salsa|maionese|ketchup|bbq|senape|piccant|yogurt)/i,
+  };
+
+  fallbackAddons.forEach((addon) => {
+    const groupId = Object.entries(matchers).find(([, regex]) => regex.test(addon.name))?.[0] || 'salse';
+    const targetGroup = groups.find((group) => group.id === groupId);
+    if (targetGroup) {
+      targetGroup.options.push({ ...addon });
+    }
+  });
+
+  return groups;
+};
+
+const normalizeMenuDataForPiadine = (data: Category[]): Category[] =>
+  data.map((category) => {
+    if (category.id !== 'piadine') {
+      return category;
+    }
+
+    return {
+      ...category,
+      products: category.products.map((product) => ({
+        ...product,
+        addonGroups: normalizePiadinaAddonGroups(product),
+      })),
+    };
+  });
 
 type NetlifyIdentityUser = {
   jwt: (forceUpdate?: boolean) => Promise<string>;
@@ -121,7 +175,9 @@ const Header = ({
         <img
           src="/dragonfly-logoV.png"
           alt="Dragonfly17 Live Music Pub"
-          className="h-17 md:h-20 w-auto object-contain brightness-110 contrast-110 saturate-125 drop-shadow-[0_0_10px_rgba(212,175,55,0.35)]"
+          loading="eager"
+          decoding="async"
+          className="h-17 md:h-20 w-auto object-contain [filter:brightness(1.4)_contrast(1.22)_saturate(1.7)_drop-shadow(0_0_16px_rgba(255,224,140,0.95))_drop-shadow(0_0_34px_rgba(212,175,55,0.75))] animate-[pulse_2.4s_ease-in-out_infinite]"
           referrerPolicy="no-referrer"
         />
       ) : (
@@ -155,7 +211,9 @@ const Header = ({
           <img
             src="/dragonfly-logoV.png"
             alt="Dragonfly logo"
-            className="h-[72px] md:h-[80px] w-auto object-contain brightness-110 contrast-110 saturate-125 drop-shadow-[0_0_12px_rgba(212,175,55,0.4)]"
+            loading="eager"
+            decoding="async"
+            className="h-[72px] md:h-[80px] w-auto object-contain [filter:brightness(1.4)_contrast(1.22)_saturate(1.7)_drop-shadow(0_0_18px_rgba(255,224,140,0.95))_drop-shadow(0_0_36px_rgba(212,175,55,0.78))] animate-[pulse_2.4s_ease-in-out_infinite]"
             referrerPolicy="no-referrer"
           />
         </button>
@@ -178,6 +236,9 @@ const Hero = ({ onCategorySelect }: { onCategorySelect: (id: string) => void }) 
     <img 
       src="/dragonfly-hero.webp"
       alt="Dragon Fly Pub Atmosphere" 
+      loading="eager"
+      decoding="async"
+      fetchPriority="high"
       className="w-full h-full object-cover object-[center_38%]"
       referrerPolicy="no-referrer"
     />
@@ -215,12 +276,18 @@ const CategoryGrid = ({ categories, onSelect }: { categories: Category[]; onSele
           onClick={() => onSelect(cat)}
           className="relative aspect-[16/10] rounded-xl overflow-hidden card-shadow cursor-pointer group"
         >
-          <img 
-            src={cat.image} 
-            alt={cat.name} 
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-            referrerPolicy="no-referrer"
-          />
+          {cat.image ? (
+            <img 
+              src={cat.image} 
+              alt={cat.name} 
+              loading="lazy"
+              decoding="async"
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-wood-medium/45 via-wood-dark/60 to-wood-dark/80" />
+          )}
           <div className="absolute inset-0 bg-black/60 group-hover:bg-black/40 transition-colors" />
           <div className="absolute inset-0 flex items-center justify-center p-2 text-center">
             <div className="flex flex-col items-center">
@@ -249,8 +316,40 @@ const QuickMenuList = ({ categories, onSelect }: { categories: Category[]; onSel
   </section>
 );
 
-const ProductCard = ({ product }: { product: Product }) => {
+const ProductCard = ({ product, compactNoImage = false }: { product: Product; compactNoImage?: boolean }) => {
   const [showAllergens, setShowAllergens] = useState(false);
+  const [openAddonGroupId, setOpenAddonGroupId] = useState<string | null>(null);
+
+  const displayPrice =
+    product.price ||
+    (product.prices && product.prices.length > 0 ? product.prices.map((entry) => `${entry.label} ${entry.value}`).join(' / ') : '');
+
+  useEffect(() => {
+    setOpenAddonGroupId(null);
+  }, [product.id]);
+
+  const addonGroups = product.addonGroups || [];
+
+  if (compactNoImage) {
+    return (
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-3 rounded-2xl border border-gold/15 bg-wood-medium/10 px-4 py-3 card-shadow"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h4 className="text-cream font-semibold text-lg leading-tight">{product.name}</h4>
+            {product.description && (
+              <p className="mt-1 text-xs text-beige/70 leading-relaxed">{product.description}</p>
+            )}
+          </div>
+          {displayPrice && <span className="text-gold font-bold text-lg whitespace-nowrap">{displayPrice}</span>}
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div 
@@ -260,12 +359,34 @@ const ProductCard = ({ product }: { product: Product }) => {
       className="bg-wood-medium/10 rounded-3xl overflow-hidden card-shadow mb-6 border border-wood-light/10"
     >
       <div className="relative aspect-[4/3] w-full">
-        <img 
-          src={product.image} 
-          alt={product.name} 
-          className="w-full h-full object-cover"
-          referrerPolicy="no-referrer"
-        />
+        {product.image ? (
+          <img 
+            src={product.image} 
+            alt={product.name} 
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <div className="w-full h-full relative overflow-hidden bg-gradient-to-br from-wood-medium/45 via-wood-dark/75 to-black/85">
+            <div className="absolute -top-10 -left-10 w-40 h-40 rounded-full bg-gold/12 blur-2xl" />
+            <div className="absolute -bottom-14 -right-10 w-44 h-44 rounded-full bg-accent-orange/15 blur-2xl" />
+            <div className="absolute inset-0 opacity-30 [background:radial-gradient(circle_at_25%_20%,rgba(255,255,255,0.18),transparent_45%),radial-gradient(circle_at_75%_80%,rgba(212,175,55,0.22),transparent_42%)]" />
+
+            <div className="absolute inset-0 flex items-center justify-center p-5">
+              <div className="w-full h-full rounded-2xl border border-gold/20 bg-wood-dark/35 backdrop-blur-[1px] flex flex-col items-center justify-center text-center px-4">
+                <div className="w-16 h-16 rounded-full border border-gold/35 bg-gold/10 flex items-center justify-center mb-3 shadow-[0_0_20px_rgba(212,175,55,0.2)]">
+                  <span className="vintage-title text-2xl text-gold/90">
+                    {product.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <p className="text-gold/80 text-[10px] uppercase tracking-[0.18em] font-semibold mb-1">Selezione della casa</p>
+                <p className="text-beige/85 text-sm leading-tight max-w-[220px] line-clamp-2">{product.name}</p>
+              </div>
+            </div>
+          </div>
+        )}
         {product.price && (
           <div className="absolute top-4 right-4 bg-wood-dark/80 backdrop-blur-sm px-4 py-1 rounded-full border border-gold/30">
             <span className="text-gold font-bold text-lg">{product.price}</span>
@@ -320,7 +441,51 @@ const ProductCard = ({ product }: { product: Product }) => {
           </div>
         )}
 
-        {product.addons && product.addons.length > 0 && (
+        {addonGroups.length > 0 && (
+          <div className="mt-4 rounded-xl border border-gold/20 bg-wood-dark/35 p-3">
+            <p className="text-[10px] text-gold uppercase font-bold tracking-widest mb-2">Aggiunte</p>
+            <div className="grid gap-2 sm:grid-cols-2 mb-2">
+              {addonGroups.map((group) => (
+                <div key={group.id} className="space-y-1">
+                  <button
+                    onClick={() => setOpenAddonGroupId((prev) => (prev === group.id ? null : group.id))}
+                    className="w-full px-3 py-2 text-xs uppercase tracking-wider font-semibold rounded-lg border border-gold/25 text-beige hover:text-gold hover:bg-gold/10 transition-colors"
+                  >
+                    {group.name}
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <AnimatePresence mode="wait">
+              {openAddonGroupId && (
+                <motion.div
+                  key={openAddonGroupId}
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="bg-wood-dark/40 rounded-xl p-3 border border-gold/10">
+                    <p className="text-[10px] text-gold uppercase font-bold mb-2 tracking-widest">
+                      {addonGroups.find((group) => group.id === openAddonGroupId)?.name}
+                    </p>
+                    <div className="grid gap-1.5">
+                      {(addonGroups.find((group) => group.id === openAddonGroupId)?.options || []).map((option, i) => (
+                        <div key={i} className="flex items-center justify-between text-sm">
+                          <span className="text-beige/90">{option.name}</span>
+                          <span className="text-gold font-semibold">{option.price}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {addonGroups.length === 0 && product.addons && product.addons.length > 0 && (
           <div className="mt-4 rounded-xl border border-gold/20 bg-wood-dark/35 p-3">
             <p className="text-[10px] text-gold uppercase font-bold tracking-widest mb-2">Aggiunte</p>
             <div className="grid gap-1.5">
@@ -470,7 +635,7 @@ const AdminPanel = ({
       id: createId('cat'),
       name: 'Nuova Categoria',
       icon: '🍽️',
-      image: '/dragonfly-hero.webp',
+      image: '',
       products: [],
     };
 
@@ -500,9 +665,10 @@ const AdminPanel = ({
       name: 'Nuovo Prodotto',
       description: 'Descrizione prodotto',
       price: '0.00€',
-      image: '/dragonfly-hero.webp',
+      image: '',
       allergens: [],
       addons: [],
+      addonGroups: selectedCategoryId === 'piadine' ? clonePiadinaAddonGroups() : undefined,
     };
 
     setDraft((prev) =>
@@ -524,7 +690,7 @@ const AdminPanel = ({
     );
   };
 
-  const addProductAddon = (productId: string) => {
+  const addProductAddonOption = (productId: string, groupId: string) => {
     setDraft((prev) =>
       prev.map((cat) => {
         if (cat.id !== selectedCategoryId) return cat;
@@ -532,15 +698,29 @@ const AdminPanel = ({
           ...cat,
           products: cat.products.map((product) => {
             if (product.id !== productId) return product;
-            const nextAddons: ProductAddon[] = [...(product.addons || []), { name: 'Nuova aggiunta', price: '+0.50€' }];
-            return { ...product, addons: nextAddons };
+
+            const nextGroups = (product.addonGroups?.length ? product.addonGroups : clonePiadinaAddonGroups()).map((group) => {
+              if (group.id !== groupId) return group;
+              return {
+                ...group,
+                options: [...group.options, { name: 'Nuova aggiunta', price: '+0.50€' }],
+              };
+            });
+
+            return { ...product, addonGroups: nextGroups };
           }),
         };
       })
     );
   };
 
-  const updateProductAddon = (productId: string, index: number, field: keyof ProductAddon, value: string) => {
+  const updateProductAddonOption = (
+    productId: string,
+    groupId: string,
+    optionIndex: number,
+    field: keyof ProductAddon,
+    value: string
+  ) => {
     setDraft((prev) =>
       prev.map((cat) => {
         if (cat.id !== selectedCategoryId) return cat;
@@ -548,17 +728,23 @@ const AdminPanel = ({
           ...cat,
           products: cat.products.map((product) => {
             if (product.id !== productId) return product;
-            const nextAddons = [...(product.addons || [])];
-            if (!nextAddons[index]) return product;
-            nextAddons[index] = { ...nextAddons[index], [field]: value };
-            return { ...product, addons: nextAddons };
+
+            const nextGroups = (product.addonGroups?.length ? product.addonGroups : clonePiadinaAddonGroups()).map((group) => {
+              if (group.id !== groupId) return group;
+              const nextOptions = [...group.options];
+              if (!nextOptions[optionIndex]) return group;
+              nextOptions[optionIndex] = { ...nextOptions[optionIndex], [field]: value };
+              return { ...group, options: nextOptions };
+            });
+
+            return { ...product, addonGroups: nextGroups };
           }),
         };
       })
     );
   };
 
-  const deleteProductAddon = (productId: string, index: number) => {
+  const deleteProductAddonOption = (productId: string, groupId: string, optionIndex: number) => {
     setDraft((prev) =>
       prev.map((cat) => {
         if (cat.id !== selectedCategoryId) return cat;
@@ -566,8 +752,14 @@ const AdminPanel = ({
           ...cat,
           products: cat.products.map((product) => {
             if (product.id !== productId) return product;
-            const nextAddons = (product.addons || []).filter((_, i) => i !== index);
-            return { ...product, addons: nextAddons.length ? nextAddons : [] };
+
+            const nextGroups = (product.addonGroups?.length ? product.addonGroups : clonePiadinaAddonGroups()).map((group) => {
+              if (group.id !== groupId) return group;
+              const nextOptions = group.options.filter((_, i) => i !== optionIndex);
+              return { ...group, options: nextOptions };
+            });
+
+            return { ...product, addonGroups: nextGroups };
           }),
         };
       })
@@ -803,36 +995,46 @@ const AdminPanel = ({
 
                         {isPiadineCategory && (
                           <div className="space-y-3 mt-3 p-3 bg-wood-dark/20 rounded-xl border border-gold/10">
-                            <div className="flex justify-between items-center">
-                              <label className="text-xs uppercase tracking-widest text-gold/70">Aggiunte personalizzabili</label>
-                              <button
-                                onClick={() => addProductAddon(product.id)}
-                                className="px-2 py-1 bg-gold/10 text-gold text-xs rounded border border-gold/20 hover:bg-gold/20 transition-colors"
-                              >
-                                + Aggiunta
-                              </button>
-                            </div>
+                            <label className="text-xs uppercase tracking-widest text-gold/70">Aggiunte personalizzabili (4 menu)</label>
 
-                            {(product.addons || []).map((addon, addonIndex) => (
-                              <div key={addonIndex} className="flex gap-2 items-center">
-                                <input
-                                  value={addon.name}
-                                  onChange={(e) => updateProductAddon(product.id, addonIndex, 'name', e.target.value)}
-                                  className="flex-1 bg-wood-dark/40 border border-gold/15 rounded-lg px-2 py-1.5 text-beige text-sm"
-                                  placeholder="Nome aggiunta"
-                                />
-                                <input
-                                  value={addon.price}
-                                  onChange={(e) => updateProductAddon(product.id, addonIndex, 'price', e.target.value)}
-                                  className="w-28 bg-wood-dark/40 border border-gold/15 rounded-lg px-2 py-1.5 text-beige text-sm"
-                                  placeholder="+1.00€"
-                                />
-                                <button
-                                  onClick={() => deleteProductAddon(product.id, addonIndex)}
-                                  className="text-red-400 p-1 rounded hover:bg-red-500/20"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
+                            {(product.addonGroups?.length ? product.addonGroups : PIADINA_ADDON_GROUPS).map((group) => (
+                              <div key={group.id} className="space-y-2 rounded-lg border border-gold/10 bg-wood-dark/20 p-2.5">
+                                <div className="flex justify-between items-center">
+                                  <p className="text-xs uppercase tracking-wider text-gold/80">{group.name}</p>
+                                  <button
+                                    onClick={() => addProductAddonOption(product.id, group.id)}
+                                    className="px-2 py-1 bg-gold/10 text-gold text-xs rounded border border-gold/20 hover:bg-gold/20 transition-colors"
+                                  >
+                                    + Aggiunta
+                                  </button>
+                                </div>
+
+                                {group.options.map((option, optionIndex) => (
+                                  <div key={optionIndex} className="flex gap-2 items-center">
+                                    <input
+                                      value={option.name}
+                                      onChange={(e) => updateProductAddonOption(product.id, group.id, optionIndex, 'name', e.target.value)}
+                                      className="flex-1 bg-wood-dark/40 border border-gold/15 rounded-lg px-2 py-1.5 text-beige text-sm"
+                                      placeholder="Nome aggiunta"
+                                    />
+                                    <input
+                                      value={option.price}
+                                      onChange={(e) => updateProductAddonOption(product.id, group.id, optionIndex, 'price', e.target.value)}
+                                      className="w-28 bg-wood-dark/40 border border-gold/15 rounded-lg px-2 py-1.5 text-beige text-sm"
+                                      placeholder="+1.00€"
+                                    />
+                                    <button
+                                      onClick={() => deleteProductAddonOption(product.id, group.id, optionIndex)}
+                                      className="text-red-400 p-1 rounded hover:bg-red-500/20"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ))}
+
+                                {group.options.length === 0 && (
+                                  <p className="text-beige/55 text-xs italic">Nessuna aggiunta in questo gruppo.</p>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -983,7 +1185,7 @@ const PrivacyPolicyModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
 // --- Main App ---
 
 export default function App() {
-  const [menuData, setMenuData] = useState<Category[]>(MENU_DATA);
+  const [menuData, setMenuData] = useState<Category[]>(normalizeMenuDataForPiadine(MENU_DATA));
   const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -991,6 +1193,8 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
 
   const normalizedPath =
     typeof window !== 'undefined' ? window.location.pathname.replace(/\/+$/, '') || '/' : '';
@@ -1088,7 +1292,7 @@ export default function App() {
         if (res.ok) {
           const parsed = await res.json();
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setMenuData(parsed);
+            setMenuData(normalizeMenuDataForPiadine(parsed));
           }
         }
       } catch (err) {
@@ -1127,6 +1331,35 @@ export default function App() {
     const nextIndex = (currentCategoryIndex + 1) % menuData.length;
     setCurrentCategory(menuData[nextIndex]);
     setSearchQuery("");
+  };
+
+  const handleCategoryTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    touchStartXRef.current = touch.clientX;
+    touchStartYRef.current = touch.clientY;
+  };
+
+  const handleCategoryTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartXRef.current === null || touchStartYRef.current === null) return;
+
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - touchStartXRef.current;
+    const dy = touch.clientY - touchStartYRef.current;
+
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+
+    const horizontalSwipeThreshold = 60;
+    const isMostlyHorizontal = Math.abs(dx) > Math.abs(dy) * 1.2;
+
+    if (!isMostlyHorizontal || Math.abs(dx) < horizontalSwipeThreshold) return;
+
+    if (dx < 0) {
+      goToNextCategory();
+      return;
+    }
+
+    goToPrevCategory();
   };
 
   const goToContactSection = () => {
@@ -1192,7 +1425,8 @@ export default function App() {
         onClose={() => setIsAdminOpen(false)}
         categories={menuData}
         onSave={async (nextData) => {
-          setMenuData(nextData);
+          const normalizedData = normalizeMenuDataForPiadine(nextData);
+          setMenuData(normalizedData);
           try {
             const token = await window.netlifyIdentity?.currentUser()?.jwt();
             const res = await fetch('/.netlify/functions/menu', {
@@ -1201,7 +1435,7 @@ export default function App() {
                 'Content-Type': 'application/json',
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {})
               },
-              body: JSON.stringify(nextData)
+              body: JSON.stringify(normalizedData)
             });
             if (res.ok) {
               alert('✅ Nuovo menù pubblicato istantaneamente per tutti i clienti!');
@@ -1286,6 +1520,8 @@ export default function App() {
                       <img
                         src="/Scritta_Logo-NoSfondo.webp"
                         alt="Credits logo"
+                        loading="lazy"
+                        decoding="async"
                         className="h-8 md:h-9 w-auto max-w-[170px] object-contain opacity-100"
                         referrerPolicy="no-referrer"
                       />
@@ -1300,6 +1536,8 @@ export default function App() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
+              onTouchStart={handleCategoryTouchStart}
+              onTouchEnd={handleCategoryTouchEnd}
               className="px-4 py-6"
             >
               {/* Search Bar */}
@@ -1325,7 +1563,7 @@ export default function App() {
               {filteredProducts.length > 0 ? (
                 filteredProducts.map((product) => (
                   <div key={product.id}>
-                    <ProductCard product={product} />
+                    <ProductCard product={product} compactNoImage={currentCategory.id === 'amari' || currentCategory.id === 'bibite'} />
                   </div>
                 ))
               ) : (
