@@ -17,7 +17,7 @@ import {
   Phone,
   AlertCircle
 } from 'lucide-react';
-import { MENU_DATA, Category, Product, ProductAddon, ProductAddonGroup, PIADINA_ADDON_GROUPS, SERVICE_CHARGE } from './data';
+import { MENU_DATA, Category, Product, ProductAddon, ProductAddonGroup, PIADINA_ADDON_GROUPS, SERVICE_CHARGE, CATEGORY_IMAGE_FOLDERS } from './data';
 
 const MENU_STORAGE_KEY = 'dragonfly-menu-data-v1';
 const IMAGE_UPLOAD_HELPER_URL = 'https://postimages.org/';
@@ -385,6 +385,11 @@ const ProductCard = ({ product, compactNoImage = false }: { product: Product; co
                 <p className="text-beige/85 text-sm leading-tight max-w-[220px] line-clamp-2">{product.name}</p>
               </div>
             </div>
+          </div>
+        )}
+        {product.format && (
+          <div className="absolute top-4 left-4 bg-wood-dark/80 backdrop-blur-sm px-4 py-1 rounded-full border border-gold/30">
+            <span className="text-gold font-bold text-lg">{product.format}</span>
           </div>
         )}
         {product.price && (
@@ -897,24 +902,57 @@ const AdminPanel = ({
                           className="w-full bg-wood-dark/40 border border-gold/15 rounded-lg px-3 py-2 text-beige min-h-[74px]"
                           placeholder="Descrizione"
                         />
+                        <input
+                          value={product.format || ''}
+                          onChange={(event) => updateProductField(product.id, 'format', event.target.value)}
+                          className="w-full bg-wood-dark/40 border border-gold/15 rounded-lg px-3 py-2 text-beige"
+                          placeholder="Formato (es. 33cl, 50cl)"
+                        />
                         <div className="flex flex-col gap-2 p-3 bg-wood-dark/20 rounded-xl border border-gold/10">
                           <label className="text-xs uppercase tracking-widest text-gold/70">Immagine Prodotto</label>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={async (e) => {
-                              const file = e.target.files?.[0];
-                              if (!file) return;
-                              try {
-                                const compressed = await compressImage(file, 600, 600, 0.7);
-                                updateProductField(product.id, 'image', compressed);
-                              } catch (err) {
-                                console.error('Failed to compress image:', err);
-                                alert("Errore durante l'elaborazione dell'immagine.");
-                              }
-                            }}
-                            className="text-sm text-beige file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gold file:text-wood-dark hover:file:bg-accent-orange transition-colors"
-                          />
+                          
+                          {/* Dropdown per immagini disponibili dalla cartella */}
+                          {CATEGORY_IMAGE_FOLDERS[selectedCategoryId] && CATEGORY_IMAGE_FOLDERS[selectedCategoryId].length > 0 && (
+                            <div className="flex flex-col gap-2">
+                              <label className="text-xs uppercase tracking-widest text-gold/50">Seleziona dalla cartella</label>
+                              <select
+                                value={product.image}
+                                onChange={(e) => updateProductField(product.id, 'image', e.target.value)}
+                                className="w-full bg-wood-dark/40 border border-gold/15 rounded-lg px-3 py-2 text-beige text-sm"
+                              >
+                                <option value="">-- Scegli immagine --</option>
+                                {CATEGORY_IMAGE_FOLDERS[selectedCategoryId].map((img) => {
+                                  const fileName = img.split('/').pop() || '';
+                                  return (
+                                    <option key={img} value={img}>
+                                      {fileName}
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                            </div>
+                          )}
+                          
+                          <div className="border-t border-gold/10 pt-3">
+                            <label className="text-xs uppercase tracking-widest text-gold/50 mb-2 block">Oppure carica un file</label>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                try {
+                                  const compressed = await compressImage(file, 600, 600, 0.7);
+                                  updateProductField(product.id, 'image', compressed);
+                                } catch (err) {
+                                  console.error('Failed to compress image:', err);
+                                  alert("Errore durante l'elaborazione dell'immagine.");
+                                }
+                              }}
+                              className="text-sm text-beige file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gold file:text-wood-dark hover:file:bg-accent-orange transition-colors"
+                            />
+                          </div>
+                          
                           <input
                             value={product.image}
                             onChange={(event) => updateProductField(product.id, 'image', event.target.value)}

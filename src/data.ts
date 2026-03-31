@@ -24,6 +24,7 @@ export interface Product {
   addonGroups?: ProductAddonGroup[];
   image: string;
   allergens?: string[];
+  format?: string;
 }
 
 export const PIADINA_ADDON_GROUPS: ProductAddonGroup[] = [
@@ -74,6 +75,34 @@ export interface Category {
   image: string;
   products: Product[];
 }
+
+export const CATEGORY_IMAGE_FOLDERS: Record<string, string[]> = {
+  birre_bottiglia: [
+    '/Birre_Bottiglia/alpine.webp',
+    '/Birre_Bottiglia/ceres.webp',
+    '/Birre_Bottiglia/Chimay_blue.webp',
+    '/Birre_Bottiglia/Chimay_red.webp',
+    '/Birre_Bottiglia/chiway_triple.webp',
+    '/Birre_Bottiglia/CHOUFFE.webp',
+    '/Birre_Bottiglia/Dimont.webp',
+    '/Birre_Bottiglia/dimont_Ipa.webp',
+    '/Birre_Bottiglia/Flötzinger.webp',
+    '/Birre_Bottiglia/Guinners.webp',
+    '/Birre_Bottiglia/löwenbrau.webp',
+    '/Birre_Bottiglia/mill_ican.webp',
+    '/Birre_Bottiglia/Rascals_jail_break_lager.webp',
+    '/Birre_Bottiglia/spalter_analcolica.webp',
+    '/Birre_Bottiglia/spalter_pils.webp',
+    '/Birre_Bottiglia/treggia.webp'
+  ],
+  birre_artigianali: [],
+  cocktail: [],
+  dolci: [],
+  fritti: [],
+  panini: [],
+  patatine: [],
+  pinse: []
+};
 
 export const MENU_DATA: Category[] = [
   {
@@ -223,7 +252,8 @@ export const MENU_DATA: Category[] = [
         description: "IPA aromatica e moderna, caratterizzata da note tropicali e agrumate grazie ai luppoli neozelandesi. Corpo medio e finale amarognolo persistente.",
         price: "6,50€",
         image: "/Birre_Bottiglia/alpine.webp",
-        allergens: ["Glutine"]
+        allergens: ["Glutine"],
+        format: "33cl"
       },
       {
         id: "b2",
@@ -231,7 +261,8 @@ export const MENU_DATA: Category[] = [
         description: "IPA dal profilo fresco e luppolato, con sentori di agrumi e resina. Bilanciata e accessibile, adatta anche a chi cerca una birra senza glutine.",
         price: "6,50€",
         image: "/Birre_Bottiglia/dimont_Ipa.webp",
-        allergens: ["Senza glutine"]
+        allergens: ["Senza glutine"],
+        format: "33cl"
       },
       {
         id: "b3",
@@ -239,7 +270,8 @@ export const MENU_DATA: Category[] = [
         description: "Birra ambrata dal gusto morbido e maltato, con leggere note di caramello e tostato. Finale equilibrato e poco amaro.",
         price: "6,50€",
         image: "/Birre_Bottiglia/Dimont.webp",
-        allergens: ["Senza glutine"]
+        allergens: ["Senza glutine"],
+        format: "33cl"
       },
       {
         id: "b4",
@@ -247,7 +279,8 @@ export const MENU_DATA: Category[] = [
         description: "Lager fresca e pulita, dal gusto leggero e beverino. Note di cereale e luppolo delicato, perfetta per una bevuta dissetante.",
         price: "7€",
         image: "/Birre_Bottiglia/Rascals_jail_break_lager.webp",
-        allergens: ["Senza glutine"]
+        allergens: ["Senza glutine"],
+        format: "44cl"
       },
       {
         id: "b5",
@@ -255,7 +288,8 @@ export const MENU_DATA: Category[] = [
         description: "Birra trappista bionda, complessa e speziata, con note fruttate e lievitate. Corpo pieno e finale secco.",
         price: "6€",
         image: "/Birre_Bottiglia/chiway_triple.webp",
-        allergens: ["Glutine"]
+        allergens: ["Glutine"],
+        format: "33cl"
       },
       {
         id: "b6",
@@ -263,7 +297,8 @@ export const MENU_DATA: Category[] = [
         description: "Strong ale scura, intensa e corposa, con aromi di frutta secca, caramello e spezie. Ideale da meditazione.",
         price: "6€",
         image: "/Birre_Bottiglia/Chimay_blue.webp",
-        allergens: ["Glutine"]
+        allergens: ["Glutine"],
+        format: "33cl"
       },
       {
         id: "b7",
@@ -271,7 +306,8 @@ export const MENU_DATA: Category[] = [
         description: "Dubbel dal gusto equilibrato, con note di malto, frutta rossa e una leggera speziatura. Morbida e rotonda.",
         price: "6€",
         image: "/Birre_Bottiglia/Chimay_red.webp",
-        allergens: ["Glutine"]
+        allergens: ["Glutine"],
+        format: "33cl"
       },
       {
         id: "b8",
@@ -279,7 +315,8 @@ export const MENU_DATA: Category[] = [
         description: "Belgian ale dorata, fruttata e speziata, con note di coriandolo e agrumi. Corpo medio e finale vivace.",
         price: "6€",
         image: "/Birre_Bottiglia/CHOUFFE.webp",
-        allergens: ["Glutine"]
+        allergens: ["Glutine"],
+        format: "33cl"
       },
       {
         id: "b9",
@@ -287,7 +324,8 @@ export const MENU_DATA: Category[] = [
         description: "Weissbier tedesca torbida e rinfrescante, con tipiche note di banana e chiodi di garofano. Morbida e dissetante.",
         price: "5,50€",
         image: "/Birre_Bottiglia/Flötzinger.webp",
-        allergens: ["Glutine"]
+        allergens: ["Glutine"],
+        format: "50cl"
       },
       {
         id: "b10",
@@ -295,7 +333,8 @@ export const MENU_DATA: Category[] = [
         description: "Pils chiara e secca, con amaro elegante e note erbacee di luppolo. Molto beverina e classica.",
         price: "2,50€",
         image: "/Birre_Bottiglia/spalter_pils.webp",
-        allergens: ["Glutine"]
+        allergens: ["Glutine"],
+        format: "33cl"
       },
       {
         id: "b11",
@@ -303,7 +342,8 @@ export const MENU_DATA: Category[] = [
         description: "Birra analcolica leggera e fresca, con gusto delicato e note di malto e cereale. Ideale per chi evita l'alcol.",
         price: "2,50€",
         image: "/Birre_Bottiglia/spalter_analcolica.webp",
-        allergens: ["Glutine"]
+        allergens: ["Glutine"],
+        format: "33cl"
       },
       {
         id: "b12",
@@ -311,7 +351,8 @@ export const MENU_DATA: Category[] = [
         description: "Birra artigianale chiara ad alta gradazione, con profilo intenso e complesso. Note maltate e leggermente fruttate.",
         price: "6€",
         image: "/Birre_Bottiglia/treggia.webp",
-        allergens: ["Glutine"]
+        allergens: ["Glutine"],
+        format: "33cl"
       },
       {
         id: "b13",
@@ -319,7 +360,8 @@ export const MENU_DATA: Category[] = [
         description: "Birra dal carattere deciso, con buon equilibrio tra malto e luppolo. Corpo medio e finale persistente.",
         price: "6€",
         image: "/Birre_Bottiglia/mill_ican.webp",
-        allergens: ["Glutine"]
+        allergens: ["Glutine"],
+        format: "33cl"
       },
       {
         id: "b14",
@@ -327,7 +369,8 @@ export const MENU_DATA: Category[] = [
         description: "Strong lager dal gusto intenso e leggermente dolce, con buona struttura e finale caldo.",
         price: "3€",
         image: "/Birre_Bottiglia/ceres.webp",
-        allergens: ["Glutine"]
+        allergens: ["Glutine"],
+        format: "33cl"
       },
       {
         id: "b15",
@@ -335,7 +378,8 @@ export const MENU_DATA: Category[] = [
         description: "Lager classica tedesca, pulita e bilanciata, con leggere note maltate e finale fresco.",
         price: "2,50€",
         image: "/Birre_Bottiglia/löwenbrau.webp",
-        allergens: ["Glutine"]
+        allergens: ["Glutine"],
+        format: "33cl"
       }
     ]
   },
