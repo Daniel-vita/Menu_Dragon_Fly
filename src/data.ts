@@ -321,16 +321,142 @@ export const MENU_DATA: Category[] = [
       {
         id: "a1",
         name: "Amaro del Capo",
-        description: "Ghiacciato.",
-        price: "4.00€",
-        image: ""
+        description: "Dolce ed erbaceo, ideale da bere ghiacciato.",
+        price: "2.00€",
+        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
       },
       {
         id: "a2",
-        name: "Grappa Barricata",
-        description: "Invecchiata in botti di rovere.",
-        price: "5.00€",
-        image: ""
+        name: "Jägermeister",
+        description: "Amaro tedesco speziato, a base di 56 erbe.",
+        price: "2.00€",
+        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+      },
+      {
+        id: "a3",
+        name: "Montenegro",
+        description: "Equilibrato, dolce-amaro con note di arancia.",
+        price: "2.50€",
+        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+      },
+      {
+        id: "a4",
+        name: "Jefferson",
+        description: "Amaro calabrese naturale con agrumi e rosmarino.",
+        price: "2.50€",
+        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+      },
+      {
+        id: "a5",
+        name: "Limoncello",
+        description: "Liquore dolce e fresco alle scorze di limone.",
+        price: "2.50€",
+        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+      },
+      {
+        id: "a6",
+        name: "Vecchia Romagna",
+        description: "Storico brandy italiano, morbido e legnoso.",
+        price: "2.00€",
+        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+      },
+      {
+        id: "a7",
+        name: "Amaro al tartufo",
+        description: "Particolare, con note terrose di tartufo.",
+        price: "2.00€",
+        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+      },
+      {
+        id: "a8",
+        name: "Borsci San Marzano",
+        description: "Dolce e liquoroso, con un tocco di rum.",
+        price: "2.00€",
+        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+      },
+      {
+        id: "a9",
+        name: "Amaro Lucano",
+        description: "Profilo balsamico, agrumato e ben bilanciato.",
+        price: "2.00€",
+        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+      },
+      {
+        id: "a10",
+        name: "Fernet-Branca",
+        description: "Intenso, molto amaro e fortemente speziato.",
+        price: "2.00€",
+        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+      },
+      {
+        id: "a11",
+        name: "Brancamenta",
+        description: "Fresco e balsamico, con spiccate note di menta.",
+        price: "2.00€",
+        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+      },
+      {
+        id: "a12",
+        name: "Liquirizia",
+        description: "Liquore denso, dolce-amaro alla radice di liquirizia.",
+        price: "2.50€",
+        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+      },
+      {
+        id: "a13",
+        name: "Petrus Boonekamp",
+        description: "Amarissimo e secco, senza zuccheri aggiunti.",
+        price: "2.00€",
+        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+      },
+      {
+        id: "a14",
+        name: "Caffè Borghetti",
+        description: "Liquore dolce al vero caffè espresso italiano.",
+        price: "2.00€",
+        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+      },
+      {
+        id: "a15",
+        name: "Averna",
+        description: "Morbido, corposo, con note di erbe mediterranee.",
+        price: "2.00€",
+        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+      },
+      {
+        id: "a16",
+        name: "Baileys",
+        description: "Dolce e vellutata crema al whiskey irlandese.",
+        price: "2.50€",
+        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+      },
+      {
+        id: "g1",
+        name: "Diciotto Lune",
+        description: "Affinata in botte, morbida con sentori di vaniglia.",
+        price: "2.50€",
+        image: "https://images.unsplash.com/photo-1516733968668-dbdce39c46ef?auto=format&fit=crop&q=80&w=800"
+      },
+      {
+        id: "g2",
+        name: "903 Barricata e Bianca",
+        description: "Barricata (calda/speziata) o Bianca (secca/pulita).",
+        price: "2.50€",
+        image: "https://images.unsplash.com/photo-1516733968668-dbdce39c46ef?auto=format&fit=crop&q=80&w=800"
+      },
+      {
+        id: "g3",
+        name: "Poli Bianca / Secca Dry",
+        description: "Distillato artigianale veneto, deciso e asciutto.",
+        price: "3.00€",
+        image: "https://images.unsplash.com/photo-1516733968668-dbdce39c46ef?auto=format&fit=crop&q=80&w=800"
+      },
+      {
+        id: "g4",
+        name: "Poli Barricata / Sarpa Oro",
+        description: "Invecchiata in legno, aromatica e complessa.",
+        price: "3.00€",
+        image: "https://images.unsplash.com/photo-1516733968668-dbdce39c46ef?auto=format&fit=crop&q=80&w=800"
       }
     ]
   }
