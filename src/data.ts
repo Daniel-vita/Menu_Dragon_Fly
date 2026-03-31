@@ -215,28 +215,127 @@ export const MENU_DATA: Category[] = [
     id: "birre",
     name: "Birre in Bottiglia",
     icon: "🍺",
-    image: "https://pixabay.com/get/g967922e805207d7d741431846cd6e020bc4ffdc37271bcb76a900cb0f8365224266b278122f4a8b9a48f05e71e032869_1920.jpg",
+    image: "https://images.unsplash.com/photo-1608270861620-7476fef55afe?auto=format&fit=crop&q=80&w=800",
     products: [
       {
         id: "b1",
-        name: "Lager alla Spina",
-        description: "Fresca e beverina.",
-        prices: [
-          { label: "0.2L", value: "3.50€" },
-          { label: "0.4L", value: "5.00€" },
-          { label: "1.0L", value: "11.00€" }
-        ],
-        image: "https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&q=80&w=800"
+        name: "Nelson IPA",
+        description: "IPA aromatica e moderna, caratterizzata da note tropicali e agrumate grazie ai luppoli neozelandesi. Corpo medio e finale amarognolo persistente.",
+        price: "6,50€",
+        image: "/Birre_Bottiglia/alpine.webp",
+        allergens: ["Glutine"]
       },
       {
         id: "b2",
-        name: "Rossa d'Abbazia",
-        description: "Note di malto e caramello.",
-        prices: [
-          { label: "0.2L", value: "4.00€" },
-          { label: "0.4L", value: "6.00€" }
-        ],
-        image: "https://images.unsplash.com/photo-1559526323-cb2f2fe2591b?auto=format&fit=crop&q=80&w=800"
+        name: "DIMONT IPA (senza glutine)",
+        description: "IPA dal profilo fresco e luppolato, con sentori di agrumi e resina. Bilanciata e accessibile, adatta anche a chi cerca una birra senza glutine.",
+        price: "6,50€",
+        image: "/Birre_Bottiglia/dimont_Ipa.webp",
+        allergens: ["Senza glutine"]
+      },
+      {
+        id: "b3",
+        name: "DIMONT Ambrata (senza glutine)",
+        description: "Birra ambrata dal gusto morbido e maltato, con leggere note di caramello e tostato. Finale equilibrato e poco amaro.",
+        price: "6,50€",
+        image: "/Birre_Bottiglia/Dimont.webp",
+        allergens: ["Senza glutine"]
+      },
+      {
+        id: "b4",
+        name: "Rascals Jailbreak Lager (senza glutine)",
+        description: "Lager fresca e pulita, dal gusto leggero e beverino. Note di cereale e luppolo delicato, perfetta per una bevuta dissetante.",
+        price: "7€",
+        image: "/Birre_Bottiglia/Rascals_jail_break_lager.webp",
+        allergens: ["Senza glutine"]
+      },
+      {
+        id: "b5",
+        name: "Chimay Triple",
+        description: "Birra trappista bionda, complessa e speziata, con note fruttate e lievitate. Corpo pieno e finale secco.",
+        price: "6€",
+        image: "/Birre_Bottiglia/chiway_triple.webp",
+        allergens: ["Glutine"]
+      },
+      {
+        id: "b6",
+        name: "Chimay Blue",
+        description: "Strong ale scura, intensa e corposa, con aromi di frutta secca, caramello e spezie. Ideale da meditazione.",
+        price: "6€",
+        image: "/Birre_Bottiglia/Chimay_blue.webp",
+        allergens: ["Glutine"]
+      },
+      {
+        id: "b7",
+        name: "Chimay Red",
+        description: "Dubbel dal gusto equilibrato, con note di malto, frutta rossa e una leggera speziatura. Morbida e rotonda.",
+        price: "6€",
+        image: "/Birre_Bottiglia/Chimay_red.webp",
+        allergens: ["Glutine"]
+      },
+      {
+        id: "b8",
+        name: "La Chouffe Blonde",
+        description: "Belgian ale dorata, fruttata e speziata, con note di coriandolo e agrumi. Corpo medio e finale vivace.",
+        price: "6€",
+        image: "/Birre_Bottiglia/CHOUFFE.webp",
+        allergens: ["Glutine"]
+      },
+      {
+        id: "b9",
+        name: "Flötzinger Weissbier Hell",
+        description: "Weissbier tedesca torbida e rinfrescante, con tipiche note di banana e chiodi di garofano. Morbida e dissetante.",
+        price: "5,50€",
+        image: "/Birre_Bottiglia/Flötzinger.webp",
+        allergens: ["Glutine"]
+      },
+      {
+        id: "b10",
+        name: "Spalter Pils",
+        description: "Pils chiara e secca, con amaro elegante e note erbacee di luppolo. Molto beverina e classica.",
+        price: "2,50€",
+        image: "/Birre_Bottiglia/spalter_pils.webp",
+        allergens: ["Glutine"]
+      },
+      {
+        id: "b11",
+        name: "Spalter Analcolica",
+        description: "Birra analcolica leggera e fresca, con gusto delicato e note di malto e cereale. Ideale per chi evita l'alcol.",
+        price: "2,50€",
+        image: "/Birre_Bottiglia/spalter_analcolica.webp",
+        allergens: ["Glutine"]
+      },
+      {
+        id: "b12",
+        name: "Treggia Colle Rosso Chiara",
+        description: "Birra artigianale chiara ad alta gradazione, con profilo intenso e complesso. Note maltate e leggermente fruttate.",
+        price: "6€",
+        image: "/Birre_Bottiglia/treggia.webp",
+        allergens: ["Glutine"]
+      },
+      {
+        id: "b13",
+        name: "Mill ICAN Extra",
+        description: "Birra dal carattere deciso, con buon equilibrio tra malto e luppolo. Corpo medio e finale persistente.",
+        price: "6€",
+        image: "/Birre_Bottiglia/mill_ican.webp",
+        allergens: ["Glutine"]
+      },
+      {
+        id: "b14",
+        name: "Ceres",
+        description: "Strong lager dal gusto intenso e leggermente dolce, con buona struttura e finale caldo.",
+        price: "3€",
+        image: "/Birre_Bottiglia/ceres.webp",
+        allergens: ["Glutine"]
+      },
+      {
+        id: "b15",
+        name: "Löwenbräu",
+        description: "Lager classica tedesca, pulita e bilanciata, con leggere note maltate e finale fresco.",
+        price: "2,50€",
+        image: "/Birre_Bottiglia/löwenbrau.webp",
+        allergens: ["Glutine"]
       }
     ]
   },
