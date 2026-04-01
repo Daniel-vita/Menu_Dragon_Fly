@@ -100,10 +100,17 @@ const isValidMenuCategory = (value: unknown): value is Category => {
 const isValidRemoteMenuData = (value: unknown): value is Category[] =>
   Array.isArray(value) && value.length > 0 && value.every(isValidMenuCategory);
 
-const hasAllLocalCategoryIds = (remoteData: Category[]): boolean => {
-  const localIds = new Set(MENU_DATA.map((category) => category.id));
-  const remoteIds = new Set(remoteData.map((category) => category.id));
-  return Array.from(localIds).every((id) => remoteIds.has(id));
+/**
+ * Merges remote Blob data with local MENU_DATA.
+ * - Categories present in both remote and local → use remote version (admin edits).
+ * - Categories only in local (new categories added in code) → use local fallback.
+ * - Categories only in remote (legacy/orphan) → discarded.
+ * This ensures new categories added to MENU_DATA always appear, even if the
+ * Netlify Blob hasn't been re-saved since the new category was introduced.
+ */
+const mergeRemoteWithLocal = (remoteData: Category[]): Category[] => {
+  const remoteMap = new Map(remoteData.map((cat) => [cat.id, cat]));
+  return MENU_DATA.map((localCat) => remoteMap.get(localCat.id) ?? localCat);
 };
 
 type NetlifyIdentityUser = {
@@ -1589,29 +1596,38 @@ export default function App() {
       try {
         const res = await fetch('/.netlify/functions/menu');
         if (!res.ok) {
-          setMenuData(MENU_DATA);
+          console.warn('Remote menu fetch failed with status', res.status, '– using local MENU_DATA.');
+          setMenuData(normalizeMenuDataForPiadine(MENU_DATA));
           return;
         }
 
         const contentType = res.headers.get('content-type') || '';
         if (!contentType.toLowerCase().includes('application/json')) {
           console.warn('Remote menu endpoint did not return JSON. Using local MENU_DATA fallback.');
-          setMenuData(MENU_DATA);
+          setMenuData(normalizeMenuDataForPiadine(MENU_DATA));
           return;
         }
 
         const parsed = await res.json();
-        if (isValidRemoteMenuData(parsed) && hasAllLocalCategoryIds(parsed)) {
-          setMenuData(normalizeMenuDataForPiadine(parsed));
+        if (parsed === null) {
+          // Blob is empty – first deploy, use local data as-is.
+          console.info('Remote menu Blob is empty. Using local MENU_DATA.');
+          setMenuData(normalizeMenuDataForPiadine(MENU_DATA));
           return;
         }
 
-        console.warn('Remote menu payload is invalid, stale, or incomplete. Using local MENU_DATA fallback.');
-        setMenuData(MENU_DATA);
+        if (isValidRemoteMenuData(parsed)) {
+          // Merge: remote categories override local ones by ID; new local categories fill gaps.
+          const merged = mergeRemoteWithLocal(parsed);
+          setMenuData(normalizeMenuDataForPiadine(merged));
+          return;
+        }
+
+        console.warn('Remote menu payload is invalid. Using local MENU_DATA fallback.');
+        setMenuData(normalizeMenuDataForPiadine(MENU_DATA));
       } catch (err) {
         console.error('Failed to load remote menu', err);
-        // Fallback to local data on error
-        setMenuData(MENU_DATA);
+        setMenuData(normalizeMenuDataForPiadine(MENU_DATA));
       }
     };
     fetchMenu();
