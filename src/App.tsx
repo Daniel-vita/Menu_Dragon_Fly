@@ -100,6 +100,12 @@ const isValidMenuCategory = (value: unknown): value is Category => {
 const isValidRemoteMenuData = (value: unknown): value is Category[] =>
   Array.isArray(value) && value.length > 0 && value.every(isValidMenuCategory);
 
+const hasAllLocalCategoryIds = (remoteData: Category[]): boolean => {
+  const localIds = new Set(MENU_DATA.map((category) => category.id));
+  const remoteIds = new Set(remoteData.map((category) => category.id));
+  return Array.from(localIds).every((id) => remoteIds.has(id));
+};
+
 type NetlifyIdentityUser = {
   jwt: (forceUpdate?: boolean) => Promise<string>;
   token?: { access_token: string };
@@ -1595,12 +1601,12 @@ export default function App() {
         }
 
         const parsed = await res.json();
-        if (isValidRemoteMenuData(parsed)) {
+        if (isValidRemoteMenuData(parsed) && hasAllLocalCategoryIds(parsed)) {
           setMenuData(normalizeMenuDataForPiadine(parsed));
           return;
         }
 
-        console.warn('Remote menu payload is invalid or empty. Using local MENU_DATA fallback.');
+        console.warn('Remote menu payload is invalid, stale, or incomplete. Using local MENU_DATA fallback.');
         setMenuData(MENU_DATA);
       } catch (err) {
         console.error('Failed to load remote menu', err);
