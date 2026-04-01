@@ -24,7 +24,12 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       const data = await store.get("latest", { type: 'json' });
       return {
         statusCode: 200,
-        headers,
+        headers: {
+          ...headers,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
         body: JSON.stringify(data || null)
       };
     }
