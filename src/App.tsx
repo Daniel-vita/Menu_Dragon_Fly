@@ -591,16 +591,26 @@ const ProductCard = ({
         )}
 
         {addonGroups.length > 0 && (
-          <div className="mt-4 rounded-xl border border-gold/20 bg-wood-dark/35 p-3">
-            <p className="text-[10px] text-gold uppercase font-bold tracking-widest mb-2">Aggiunte</p>
-            <div className="grid gap-2 sm:grid-cols-2 mb-2">
+          <div className="mt-5 rounded-2xl border border-gold/40 bg-gradient-to-br from-wood-dark/70 to-wood-medium/30 p-4 shadow-inner">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-px bg-gradient-to-r from-transparent via-gold/50 to-transparent flex-1" />
+              <p className="text-xs text-gold uppercase font-black tracking-[0.2em] px-2">Aggiunte e Variazioni</p>
+              <div className="h-px bg-gradient-to-r from-transparent via-gold/50 to-transparent flex-1" />
+            </div>
+            
+            <div className="grid gap-2 sm:grid-cols-2 mb-3">
               {addonGroups.map((group) => (
                 <div key={group.id} className="space-y-1">
                   <button
                     onClick={() => setOpenAddonGroupId((prev) => (prev === group.id ? null : group.id))}
-                    className="w-full px-3 py-2 text-xs uppercase tracking-wider font-semibold rounded-lg border border-gold/25 text-beige hover:text-gold hover:bg-gold/10 transition-colors"
+                    className={`w-full px-3 py-2 text-xs md:text-sm uppercase tracking-wider font-bold rounded-xl border transition-all duration-300 flex items-center justify-between ${
+                      openAddonGroupId === group.id
+                        ? 'border-gold text-gold bg-gold/15 shadow-[0_0_12px_rgba(212,175,55,0.25)]'
+                        : 'border-gold/30 text-cream hover:border-gold/60 hover:text-white bg-wood-dark/80 hover:bg-wood-dark/90'
+                    }`}
                   >
-                    {group.name}
+                    <span>{group.name}</span>
+                    <span className="text-lg leading-none font-light">{openAddonGroupId === group.id ? '−' : '+'}</span>
                   </button>
                 </div>
               ))}
@@ -615,15 +625,15 @@ const ProductCard = ({
                   exit={{ height: 0, opacity: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="bg-wood-dark/40 rounded-xl p-3 border border-gold/10">
-                    <p className="text-[10px] text-gold uppercase font-bold mb-2 tracking-widest">
-                      {addonGroups.find((group) => group.id === openAddonGroupId)?.name}
+                  <div className="bg-black/40 rounded-xl p-4 border border-gold/20 shadow-inner mt-2">
+                    <p className="text-[11px] text-gold uppercase font-black mb-3 tracking-[0.15em] border-b border-gold/20 pb-2">
+                      Scegli da: {addonGroups.find((group) => group.id === openAddonGroupId)?.name}
                     </p>
-                    <div className="grid gap-1.5">
+                    <div className="grid gap-2">
                       {(addonGroups.find((group) => group.id === openAddonGroupId)?.options || []).map((option, i) => (
-                        <div key={i} className="flex items-center justify-between text-sm">
-                          <span className="text-beige/90">{option.name}</span>
-                          <span className="text-gold font-semibold">{option.price}</span>
+                        <div key={i} className="flex items-center justify-between text-base py-1">
+                          <span className="text-white font-medium">{option.name}</span>
+                          <span className="text-gold font-bold bg-gold/10 px-2 py-0.5 rounded-md text-sm">{option.price}</span>
                         </div>
                       ))}
                     </div>
@@ -635,13 +645,18 @@ const ProductCard = ({
         )}
 
         {addonGroups.length === 0 && product.addons && product.addons.length > 0 && (
-          <div className="mt-4 rounded-xl border border-gold/20 bg-wood-dark/35 p-3">
-            <p className="text-[10px] text-gold uppercase font-bold tracking-widest mb-2">Aggiunte</p>
-            <div className="grid gap-1.5">
+          <div className="mt-5 rounded-2xl border border-gold/40 bg-gradient-to-br from-wood-dark/70 to-wood-medium/30 p-4 shadow-inner">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-px bg-gradient-to-r from-transparent via-gold/50 to-transparent flex-1" />
+              <p className="text-xs text-gold uppercase font-black tracking-[0.2em] px-2">Aggiunte Extra</p>
+              <div className="h-px bg-gradient-to-r from-transparent via-gold/50 to-transparent flex-1" />
+            </div>
+            
+            <div className="grid gap-2">
               {product.addons.map((addon, i) => (
-                <div key={i} className="flex items-center justify-between text-sm">
-                  <span className="text-beige/90">{addon.name}</span>
-                  <span className="text-gold font-semibold">{addon.price}</span>
+                <div key={i} className="flex items-center justify-between text-base border-b border-wood-light/10 pb-2 last:border-0 last:pb-0">
+                  <span className="text-white font-medium">{addon.name}</span>
+                  <span className="text-gold font-bold bg-gold/10 px-2 py-0.5 rounded-md text-sm">{addon.price}</span>
                 </div>
               ))}
             </div>
