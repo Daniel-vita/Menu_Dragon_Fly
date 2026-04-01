@@ -85,20 +85,8 @@ const normalizeMenuDataForPiadine = (data: Category[]): Category[] =>
     };
   });
 
-const isValidMenuCategory = (value: unknown): value is Category => {
-  if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<Category>;
-  return (
-    typeof candidate.id === 'string' &&
-    typeof candidate.name === 'string' &&
-    typeof candidate.icon === 'string' &&
-    typeof candidate.image === 'string' &&
-    Array.isArray(candidate.products)
-  );
-};
-
 const isValidRemoteMenuData = (value: unknown): value is Category[] =>
-  Array.isArray(value) && value.length > 0 && value.every(isValidMenuCategory);
+  Array.isArray(value) && value.length > 0;
 
 /**
  * Merges remote Blob data with local MENU_DATA.
