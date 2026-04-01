@@ -21,7 +21,12 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     const store = getStore("dragonfly-menu");
 
     if (event.httpMethod === "GET") {
-      const data = await store.get("latest", { type: 'json' });
+      const data = await store.get("menu_v2", { type: 'json' });
+      // If menu_v2 is missing, attempt to fall back to 'latest' so we don't return null if possible
+      let finalData = data;
+      if (!finalData) {
+         finalData = await store.get("latest", { type: 'json' });
+      }
       return {
         statusCode: 200,
         headers: {
@@ -30,7 +35,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           'Pragma': 'no-cache',
           'Expires': '0'
         },
-        body: JSON.stringify(data || null)
+        body: JSON.stringify(finalData || null)
       };
     }
 
@@ -45,7 +50,13 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
 
       // Wrapper to prevent HTTP 502 timeout limit (10s on Netlify defaults)
       const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Netlify Blobs timeout after 6 seconds")), 6000));
-      await Promise.race([store.setJSON("latest", parsedBody), timeoutPromise]);
+      await Promise.race([store.setJSON("menu_v2", parsedBody), timeoutPromise]);
+
+      // Verification Step
+      const verify = await store.get("menu_v2", { type: 'json' });
+      if (!verify || JSON.stringify(verify).length !== JSON.stringify(parsedBody).length) {
+        throw new Error("Write successful but verification failed, blob length mismatch. Netlify blobs might be caching or read-only.");
+      }
 
       return {
         statusCode: 200,
