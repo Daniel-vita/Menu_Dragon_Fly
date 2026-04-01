@@ -472,6 +472,59 @@ const ProductCard = ({
             ))}
           </div>
         )}
+        {addonGroups.length > 0 && (
+  <div className="mt-4 rounded-xl border border-gold/30 bg-gradient-to-br from-wood-dark/60 to-wood-medium/20 p-3">
+    <div className="flex items-center gap-2 mb-2">
+      <div className="h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent flex-1" />
+      <p className="text-[10px] text-gold uppercase font-black tracking-[0.2em] px-2">Aggiunte e Variazioni</p>
+      <div className="h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent flex-1" />
+    </div>
+
+    <div className="grid gap-1.5 sm:grid-cols-2">
+      {addonGroups.map((group) => (
+        <div key={group.id} className="space-y-1">
+          <button
+            onClick={() => setOpenAddonGroupId((prev) => (prev === group.id ? null : group.id))}
+            className={`w-full px-3 py-2 text-xs uppercase tracking-wider font-bold rounded-xl border transition-all duration-300 flex items-center justify-between ${
+              openAddonGroupId === group.id
+                ? 'border-gold text-gold bg-gold/15'
+                : 'border-gold/30 text-cream bg-wood-dark/70'
+            }`}
+          >
+            <span>{group.name}</span>
+            <span className="text-base leading-none font-light">{openAddonGroupId === group.id ? '−' : '+'}</span>
+          </button>
+        </div>
+      ))}
+    </div>
+
+    <AnimatePresence mode="wait">
+      {openAddonGroupId && (
+        <motion.div
+          key={openAddonGroupId}
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="overflow-hidden"
+        >
+          <div className="bg-black/40 rounded-xl p-3 border border-gold/20 mt-2">
+            <p className="text-[10px] text-gold uppercase font-black mb-2 tracking-[0.15em] border-b border-gold/20 pb-1.5">
+              {addonGroups.find((g) => g.id === openAddonGroupId)?.name}
+            </p>
+            <div className="grid gap-1.5">
+              {(addonGroups.find((g) => g.id === openAddonGroupId)?.options || []).map((opt, i) => (
+                <div key={i} className="flex items-center justify-between text-sm py-0.5">
+                  <span className="text-white font-medium">{opt.name}</span>
+                  <span className="text-gold font-bold bg-gold/10 px-2 py-0.5 rounded-md text-xs">{opt.price}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </div>
+)}
       </motion.div>
     );
   }
