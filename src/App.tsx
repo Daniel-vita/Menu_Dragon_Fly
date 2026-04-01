@@ -21,8 +21,12 @@ import { MENU_DATA, Category, Product, ProductAddon, ProductAddonGroup, PIADINA_
 
 const MENU_STORAGE_KEY = 'dragonfly-menu-data-v1';
 const IMAGE_UPLOAD_HELPER_URL = 'https://postimages.org/';
+const TAKEAWAY_PHONE_DISPLAY = '0825 194 8323';
+const TAKEAWAY_PHONE_HREF = 'tel:+3908251948323';
 
 const cloneMenuData = (data: Category[]): Category[] => JSON.parse(JSON.stringify(data));
+
+const isUploadedImage = (src?: string): boolean => !!src && src.startsWith('data:image/');
 
 const createId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
@@ -48,7 +52,8 @@ const normalizePiadinaAddonGroups = (product: Product): ProductAddonGroup[] => {
   }
 
   const matchers: Record<string, RegExp> = {
-    carne: /(prosciutto|salsiccia|speck|salame|wurstel|bresaola)/i,
+    affettati: /(pancetta|speck|mortadella|prosciutto|salame|bresaola)/i,
+    carne: /(hamburger|salsiccia|porchetta|cotechino|pollo|wurstel)/i,
     formaggi: /(squacquerone|mozzarella|scamorza|formagg|gorgonzola|stracchino|brie)/i,
     verdure: /(rucola|peperoni|cipolla|verdur|zucchine|insalata|pomodoro|melanzane|funghi)/i,
     salse: /(salsa|maionese|ketchup|bbq|senape|piccant|yogurt)/i,
@@ -100,7 +105,7 @@ declare global {
 }
 
 // --- Image Compression Utility ---
-const compressImage = (file: File, maxWidth = 800, maxHeight = 800, quality = 0.7): Promise<string> => {
+const compressImage = (file: File, maxWidth = 1400, maxHeight = 1400, quality = 0.82): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -174,7 +179,7 @@ const Header = ({
       {!showBack ? (
         <img
           src="/dragonfly-logoV.png"
-          alt="Dragonfly17 Live Music Pub"
+          alt="Dragonfly17 Genuine Pub "
           loading="eager"
           decoding="async"
           className="h-17 md:h-20 w-auto object-contain [filter:brightness(1.4)_contrast(1.22)_saturate(1.7)_drop-shadow(0_0_16px_rgba(255,224,140,0.95))_drop-shadow(0_0_34px_rgba(212,175,55,0.75))] animate-[pulse_2.4s_ease-in-out_infinite]"
@@ -277,16 +282,28 @@ const CategoryGrid = ({ categories, onSelect }: { categories: Category[]; onSele
           className="relative aspect-[16/10] rounded-xl overflow-hidden card-shadow cursor-pointer group"
         >
           {cat.image ? (
-            <img 
-              src={cat.image} 
-              alt={cat.name} 
-              loading="lazy"
-              decoding="async"
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-              referrerPolicy="no-referrer"
-            />
+            <div className="w-full h-full bg-gradient-to-br from-wood-medium/45 via-wood-dark/60 to-wood-dark/80">
+              <img 
+                src={cat.image} 
+                alt={cat.name} 
+                loading="lazy"
+                decoding="async"
+                className={`w-full h-full transition-transform duration-500 group-hover:scale-110 ${
+                  isUploadedImage(cat.image) ? 'object-contain p-2' : 'object-cover'
+                }`}
+                referrerPolicy="no-referrer"
+              />
+            </div>
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-wood-medium/45 via-wood-dark/60 to-wood-dark/80" />
+            <div className="w-full h-full bg-gradient-to-br from-wood-medium/45 via-wood-dark/60 to-wood-dark/80 flex items-center justify-center">
+              <img
+                src="/dragonfly-logoV.png"
+                alt="Dragonfly placeholder"
+                loading="lazy"
+                decoding="async"
+                className="h-20 md:h-24 w-auto object-contain opacity-98 [filter:brightness(1.35)_contrast(1.25)_saturate(1.5)_drop-shadow(0_2px_12px_rgba(212,175,55,0.55))]"
+              />
+            </div>
           )}
           <div className="absolute inset-0 bg-black/60 group-hover:bg-black/40 transition-colors" />
           <div className="absolute inset-0 flex items-center justify-center p-2 text-center">
@@ -316,13 +333,71 @@ const QuickMenuList = ({ categories, onSelect }: { categories: Category[]; onSel
   </section>
 );
 
-const ProductCard = ({ product, compactNoImage = false }: { product: Product; compactNoImage?: boolean }) => {
+const TakeawayInfo = ({ className = '' }: { className?: string }) => (
+  <div className={`rounded-2xl border border-gold/20 bg-wood-medium/10 p-4 ${className}`}>
+    <p className="text-[11px] md:text-xs uppercase tracking-[0.14em] text-gold/85 mb-1">Asporto</p>
+    <p className="text-sm text-beige/85 leading-relaxed">In paese gratis, paesi limitrofi 2,50€.</p>
+    <a
+      href={TAKEAWAY_PHONE_HREF}
+      className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl border border-gold/35 bg-gold/10 px-4 py-2 text-sm font-semibold uppercase tracking-wider text-gold hover:bg-gold hover:text-wood-dark transition-colors"
+      aria-label={`Chiama ${TAKEAWAY_PHONE_DISPLAY}`}
+    >
+      <Phone className="w-4 h-4" />
+      Chiama {TAKEAWAY_PHONE_DISPLAY}
+    </a>
+  </div>
+);
+
+const HomeDomicilioHighlight = () => (
+  <section className="px-4 pt-6 pb-2">
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: 'easeOut' }}
+      className="relative overflow-hidden rounded-3xl border border-gold/30 bg-[linear-gradient(135deg,rgba(212,175,55,0.17)_0%,rgba(109,65,30,0.35)_45%,rgba(24,17,11,0.92)_100%)] p-5 md:p-6 card-shadow"
+    >
+      <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-gold/20 blur-3xl" />
+      <div className="pointer-events-none absolute -left-16 -bottom-20 h-48 w-48 rounded-full bg-accent-orange/20 blur-3xl" />
+
+      <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.2em] text-gold/90">Consegna a domicilio</p>
+          <h3 className="vintage-title mt-1 text-2xl md:text-3xl text-cream">🚚 Domicilio</h3>
+          <p className="mt-2 text-sm md:text-base text-beige/85 leading-relaxed max-w-xl">
+            In paese gratis, paesi limitrofi 2,50€.
+          </p>
+        </div>
+
+        <a
+          href={TAKEAWAY_PHONE_HREF}
+          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-gold/40 bg-gold/15 px-5 py-3 text-sm font-bold uppercase tracking-[0.12em] text-gold hover:bg-gold hover:text-wood-dark transition-colors"
+          aria-label={`Chiama ${TAKEAWAY_PHONE_DISPLAY}`}
+        >
+          <Phone className="w-4 h-4" />
+          Chiama {TAKEAWAY_PHONE_DISPLAY}
+        </a>
+      </div>
+    </motion.div>
+  </section>
+);
+
+const ProductCard = ({
+  product,
+  compactNoImage = false,
+  categoryId
+}: {
+  product: Product;
+  compactNoImage?: boolean;
+  categoryId?: string;
+}) => {
   const [showAllergens, setShowAllergens] = useState(false);
   const [openAddonGroupId, setOpenAddonGroupId] = useState<string | null>(null);
 
   const displayPrice =
     product.price ||
     (product.prices && product.prices.length > 0 ? product.prices.map((entry) => `${entry.label} ${entry.value}`).join(' / ') : '');
+  const hasMultiPrices = !!product.prices && product.prices.length > 0;
+  const showCompactMultiPrices = compactNoImage && hasMultiPrices;
 
   useEffect(() => {
     setOpenAddonGroupId(null);
@@ -336,17 +411,41 @@ const ProductCard = ({ product, compactNoImage = false }: { product: Product; co
         layout
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-3 rounded-2xl border border-gold/15 bg-wood-medium/10 px-4 py-3 card-shadow"
+        className="relative mb-3 rounded-2xl border border-gold/15 bg-wood-medium/10 px-4 py-3 card-shadow overflow-hidden"
       >
-        <div className="flex items-start justify-between gap-4">
+        {product.soldOut && (
+          <div className="absolute inset-x-0 top-0 z-10 border-b border-red-200/70 bg-[repeating-linear-gradient(-45deg,rgba(127,29,29,0.96),rgba(127,29,29,0.96)_10px,rgba(239,68,68,0.96)_10px,rgba(239,68,68,0.96)_20px)] py-1 text-center">
+            <span className="text-[10px] font-black tracking-[0.28em] text-white uppercase">TERMINATO</span>
+          </div>
+        )}
+
+        <div className={`flex items-start justify-between gap-4 ${product.soldOut ? 'pt-6' : ''}`}>
           <div>
-            <h4 className="text-cream font-semibold text-lg leading-tight">{product.name}</h4>
+            <div className="flex items-center gap-2">
+              {product.vegan && (
+                <span className="inline-flex items-center rounded-full border border-emerald-200/70 bg-emerald-600/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                  🌱 Vegan
+                </span>
+              )}
+              <h4 className="text-cream font-semibold text-lg leading-tight">{product.name}</h4>
+            </div>
             {product.description && (
               <p className="mt-1 text-xs text-beige/70 leading-relaxed">{product.description}</p>
             )}
           </div>
-          {displayPrice && <span className="text-gold font-bold text-lg whitespace-nowrap">{displayPrice}</span>}
+          {(!showCompactMultiPrices && displayPrice) && <span className="text-gold font-bold text-lg whitespace-nowrap">{displayPrice}</span>}
         </div>
+
+        {showCompactMultiPrices && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {product.prices!.map((p, i) => (
+              <div key={i} className="flex flex-col items-center bg-wood-dark/50 border border-gold/20 rounded-xl px-3 py-1 min-w-[72px]">
+                <span className="text-[10px] text-gold/60 uppercase font-bold">{p.label}</span>
+                <span className="text-cream font-bold">{p.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </motion.div>
     );
   }
@@ -360,14 +459,16 @@ const ProductCard = ({ product, compactNoImage = false }: { product: Product; co
     >
       <div className="relative aspect-[4/3] w-full">
         {product.image ? (
-          <img 
-            src={product.image} 
-            alt={product.name} 
-            loading="lazy"
-            decoding="async"
-            className="w-full h-full object-cover"
-            referrerPolicy="no-referrer"
-          />
+          <div className="w-full h-full bg-gradient-to-br from-wood-medium/45 via-wood-dark/60 to-wood-dark/80">
+            <img 
+              src={product.image} 
+              alt={product.name} 
+              loading="lazy"
+              decoding="async"
+              className={`w-full h-full ${isUploadedImage(product.image) ? 'object-contain p-2' : 'object-cover'}`}
+              referrerPolicy="no-referrer"
+            />
+          </div>
         ) : (
           <div className="w-full h-full relative overflow-hidden bg-gradient-to-br from-wood-medium/45 via-wood-dark/75 to-black/85">
             <div className="absolute -top-10 -left-10 w-40 h-40 rounded-full bg-gold/12 blur-2xl" />
@@ -376,20 +477,37 @@ const ProductCard = ({ product, compactNoImage = false }: { product: Product; co
 
             <div className="absolute inset-0 flex items-center justify-center p-5">
               <div className="w-full h-full rounded-2xl border border-gold/20 bg-wood-dark/35 backdrop-blur-[1px] flex flex-col items-center justify-center text-center px-4">
-                <div className="w-16 h-16 rounded-full border border-gold/35 bg-gold/10 flex items-center justify-center mb-3 shadow-[0_0_20px_rgba(212,175,55,0.2)]">
-                  <span className="vintage-title text-2xl text-gold/90">
-                    {product.name.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <p className="text-gold/80 text-[10px] uppercase tracking-[0.18em] font-semibold mb-1">Selezione della casa</p>
+                <img
+                  src="/dragonfly-logoV.png"
+                  alt="Dragonfly placeholder"
+                  loading="lazy"
+                  decoding="async"
+                  className="h-24 md:h-32 w-auto object-contain mb-3 [filter:brightness(1.4)_contrast(1.3)_saturate(1.6)_drop-shadow(0_3px_14px_rgba(212,175,55,0.6))]"
+                />
+                <p className="text-gold/80 text-[10px] uppercase tracking-[0.18em] font-semibold mb-1">Selezione Dragonfly</p>
                 <p className="text-beige/85 text-sm leading-tight max-w-[220px] line-clamp-2">{product.name}</p>
               </div>
             </div>
           </div>
         )}
-        {product.format && (
-          <div className="absolute top-4 left-4 bg-wood-dark/80 backdrop-blur-sm px-4 py-1 rounded-full border border-gold/30">
-            <span className="text-gold font-bold text-lg">{product.format}</span>
+        <div className="absolute top-4 left-4 flex flex-col gap-2 items-start">
+          {product.vegan && (
+            <div className="bg-emerald-700/90 backdrop-blur-sm px-3 py-1 rounded-full border border-emerald-200/70">
+              <span className="text-white font-bold text-sm uppercase tracking-wider">🌱 Vegan</span>
+            </div>
+          )}
+          {product.format && (
+            <div className="bg-wood-dark/80 backdrop-blur-sm px-4 py-1 rounded-full border border-gold/30">
+              <span className="text-gold font-bold text-lg">{product.format}</span>
+            </div>
+          )}
+        </div>
+
+        {product.soldOut && (
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-3">
+            <div className="w-[140%] -rotate-12 border-y-4 border-red-200/90 bg-[repeating-linear-gradient(-45deg,rgba(127,29,29,0.96),rgba(127,29,29,0.96)_14px,rgba(239,68,68,0.96)_14px,rgba(239,68,68,0.96)_28px)] py-2 text-center shadow-2xl">
+              <span className="text-white font-black tracking-[0.32em] text-sm md:text-base uppercase">TERMINATO</span>
+            </div>
           </div>
         )}
         {product.price && (
@@ -508,72 +626,118 @@ const ProductCard = ({ product, compactNoImage = false }: { product: Product; co
   );
 };
 
-const Sidebar = ({ isOpen, onClose, categories, onCategorySelect, onContactClick }: { isOpen: boolean; onClose: () => void; categories: Category[]; onCategorySelect: (cat: Category) => void; onContactClick: () => void }) => (
-  <AnimatePresence>
-    {isOpen && (
-      <>
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="fixed inset-0 bg-black/60 z-[60] backdrop-blur-sm"
-        />
-        <motion.div 
-          initial={{ x: '-100%' }}
-          animate={{ x: 0 }}
-          exit={{ x: '-100%' }}
-          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="fixed top-0 left-0 bottom-0 w-[80%] max-w-xs bg-wood-dark z-[70] p-8 card-shadow border-r border-gold/10 overflow-y-auto"
-        >
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="vintage-title text-2xl text-gold uppercase tracking-wider">Dragonfly17</h2>
-            <button onClick={onClose} className="p-2 text-beige">
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-          
-          <div className="mb-8">
-            <h3 className="text-gold uppercase tracking-widest text-xs font-bold mb-4 opacity-50">Menu</h3>
-            <nav className="space-y-4">
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => {
-                    onCategorySelect(cat);
-                    onClose();
-                  }}
-                  className="w-full flex items-center gap-4 text-lg text-beige hover:text-gold transition-colors text-left"
-                >
-                  {cat.name}
-                </button>
-              ))}
-            </nav>
-          </div>
+const Sidebar = ({ isOpen, onClose, categories, onCategorySelect, onContactClick }: { isOpen: boolean; onClose: () => void; categories: Category[]; onCategorySelect: (cat: Category) => void; onContactClick: () => void }) => {
+  const [isTakeawayOpen, setIsTakeawayOpen] = useState(false);
 
-          <div className="space-y-4 pt-8 border-t border-gold/10">
-            <button
-              onClick={() => {
-                onContactClick();
-                onClose();
-              }}
-              className="w-full flex items-center gap-4 text-lg text-beige hover:text-gold transition-colors text-left"
-            >
-              <Phone className="w-5 h-5" /> Prenota Tavolo
-            </button>
-            <a href="https://maps.app.goo.gl/3bNHBbaiWMwcgMGdA" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 text-lg text-beige hover:text-gold transition-colors">
-              <MapPin className="w-5 h-5" /> Dove Siamo
-            </a>
-          </div>
-          
-          <div className="mt-12 text-center">
-            <p className="text-[10px] text-beige/40 uppercase tracking-widest">© 2026 Dragonfly17 Live Music Pub</p>
-          </div>
-        </motion.div>
-      </>
-    )}
-  </AnimatePresence>
-);
+  useEffect(() => {
+    if (!isOpen) {
+      setIsTakeawayOpen(false);
+    }
+  }, [isOpen]);
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/60 z-[60] backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ x: '-100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '-100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed top-0 left-0 bottom-0 w-[80%] max-w-xs bg-wood-dark z-[70] p-8 card-shadow border-r border-gold/10 overflow-y-auto"
+          >
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="vintage-title text-2xl text-gold uppercase tracking-wider">Dragonfly17</h2>
+              <button onClick={onClose} className="p-2 text-beige">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="mb-8">
+              <h3 className="text-gold uppercase tracking-widest text-xs font-bold mb-4 opacity-50">Menu</h3>
+              <nav className="space-y-4">
+                {categories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => {
+                      onCategorySelect(cat);
+                      onClose();
+                    }}
+                    className="w-full flex items-center gap-4 text-lg text-beige hover:text-gold transition-colors text-left"
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </nav>
+            </div>
+
+            <div className="space-y-4 pt-8 border-t border-gold/10">
+              <div>
+                <button
+                  onClick={() => setIsTakeawayOpen((prev) => !prev)}
+                  className="w-full flex items-center justify-between gap-4 text-lg text-beige hover:text-gold transition-colors text-left"
+                  aria-expanded={isTakeawayOpen}
+                >
+                  <span className="flex items-center gap-4">
+                    <span className="text-xl leading-none">🚚</span>
+                    Asporto
+                  </span>
+                  <ChevronRight className={`w-5 h-5 transition-transform ${isTakeawayOpen ? 'rotate-90' : ''}`} />
+                </button>
+
+                <AnimatePresence initial={false}>
+                  {isTakeawayOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-3 rounded-xl border border-gold/20 bg-wood-medium/10 p-3 ml-9">
+                        <p className="text-sm text-beige/85 leading-relaxed">In paese gratis, paesi limitrofi 2,50€.</p>
+                        <a
+                          href={TAKEAWAY_PHONE_HREF}
+                          className="mt-2 inline-flex items-center justify-center gap-2 rounded-lg border border-gold/35 bg-gold/10 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gold hover:bg-gold hover:text-wood-dark transition-colors"
+                          aria-label={`Chiama ${TAKEAWAY_PHONE_DISPLAY}`}
+                        >
+                          <Phone className="w-4 h-4" />
+                          Chiama {TAKEAWAY_PHONE_DISPLAY}
+                        </a>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <a
+                href={TAKEAWAY_PHONE_HREF}
+                onClick={onClose}
+                className="w-full flex items-center gap-4 text-lg text-beige hover:text-gold transition-colors text-left"
+                aria-label={`Prenota un tavolo chiamando ${TAKEAWAY_PHONE_DISPLAY}`}
+              >
+                <Phone className="w-5 h-5" /> Prenota Tavolo
+              </a>
+              <a href="https://maps.app.goo.gl/3bNHBbaiWMwcgMGdA" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 text-lg text-beige hover:text-gold transition-colors">
+                <MapPin className="w-5 h-5" /> Dove Siamo
+              </a>
+            </div>
+
+            <div className="mt-12 text-center">
+              <p className="text-[10px] text-beige/40 uppercase tracking-widest">© 2026 Dragonfly17 Genuine Pub </p>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
 
 const AdminPanel = ({
   isOpen,
@@ -672,6 +836,8 @@ const AdminPanel = ({
       price: '0.00€',
       image: '',
       allergens: [],
+      vegan: false,
+      soldOut: false,
       addons: [],
       addonGroups: selectedCategoryId === 'piadine' ? clonePiadinaAddonGroups() : undefined,
     };
@@ -692,6 +858,26 @@ const AdminPanel = ({
           ? { ...cat, products: cat.products.filter((product) => product.id !== productId) }
           : cat
       )
+    );
+  };
+
+  const moveProduct = (productId: string, direction: 'up' | 'down') => {
+    setDraft((prev) =>
+      prev.map((cat) => {
+        if (cat.id !== selectedCategoryId) return cat;
+
+        const currentIndex = cat.products.findIndex((product) => product.id === productId);
+        if (currentIndex === -1) return cat;
+
+        const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+        if (targetIndex < 0 || targetIndex >= cat.products.length) return cat;
+
+        const nextProducts = [...cat.products];
+        const [moved] = nextProducts.splice(currentIndex, 1);
+        nextProducts.splice(targetIndex, 0, moved);
+
+        return { ...cat, products: nextProducts };
+      })
     );
   };
 
@@ -848,7 +1034,7 @@ const AdminPanel = ({
                           const file = e.target.files?.[0];
                           if (!file) return;
                           try {
-                            const compressed = await compressImage(file, 800, 800, 0.7);
+                            const compressed = await compressImage(file, 1400, 1400, 0.82);
                             updateCategoryField('image', compressed);
                           } catch (err) {
                             console.error('Failed to compress image:', err);
@@ -878,17 +1064,33 @@ const AdminPanel = ({
                   </div>
 
                   <div className="space-y-3">
-                    {selectedCategory.products.map((product) => (
+                    {selectedCategory.products.map((product, index) => (
                       <div key={product.id} className="border border-gold/15 rounded-xl p-3 md:p-4 bg-wood-medium/10 space-y-2">
                         <div className="flex items-center justify-between gap-3">
                           <p className="text-gold text-sm uppercase tracking-wider">{product.name}</p>
-                          <button
-                            onClick={() => deleteProduct(product.id)}
-                            disabled={isPiadineCategory && selectedCategory.products.length === 1}
-                            className="px-2 py-1 text-xs border border-red-300/40 rounded-md text-red-200 hover:bg-red-500/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                          >
-                            Elimina
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => moveProduct(product.id, 'up')}
+                              disabled={index === 0}
+                              className="px-2 py-1 text-xs border border-gold/30 rounded-md text-gold hover:bg-gold/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              Su
+                            </button>
+                            <button
+                              onClick={() => moveProduct(product.id, 'down')}
+                              disabled={index === selectedCategory.products.length - 1}
+                              className="px-2 py-1 text-xs border border-gold/30 rounded-md text-gold hover:bg-gold/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              Giu
+                            </button>
+                            <button
+                              onClick={() => deleteProduct(product.id)}
+                              disabled={isPiadineCategory && selectedCategory.products.length === 1}
+                              className="px-2 py-1 text-xs border border-red-300/40 rounded-md text-red-200 hover:bg-red-500/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              Elimina
+                            </button>
+                          </div>
                         </div>
                         <input
                           value={product.name}
@@ -908,6 +1110,29 @@ const AdminPanel = ({
                           className="w-full bg-wood-dark/40 border border-gold/15 rounded-lg px-3 py-2 text-beige"
                           placeholder="Formato (es. 33cl, 50cl)"
                         />
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          <label className="flex items-center gap-2 rounded-lg border border-gold/15 bg-wood-dark/25 px-3 py-2 text-beige text-sm">
+                            <input
+                              type="checkbox"
+                              checked={!!product.vegan}
+                              onChange={(event) => updateProductField(product.id, 'vegan', event.target.checked)}
+                              className="h-4 w-4 accent-emerald-500"
+                            />
+                            Prodotto vegano (badge in alto a sinistra)
+                          </label>
+
+                          <label className="flex items-center gap-2 rounded-lg border border-red-300/30 bg-red-900/20 px-3 py-2 text-red-100 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={!!product.soldOut}
+                              onChange={(event) => updateProductField(product.id, 'soldOut', event.target.checked)}
+                              className="h-4 w-4 accent-red-500"
+                            />
+                            Esaurito (mostra barra TERMINATO)
+                          </label>
+                        </div>
+
                         <div className="flex flex-col gap-2 p-3 bg-wood-dark/20 rounded-xl border border-gold/10">
                           <label className="text-xs uppercase tracking-widest text-gold/70">Immagine Prodotto</label>
                           
@@ -942,7 +1167,7 @@ const AdminPanel = ({
                                 const file = e.target.files?.[0];
                                 if (!file) return;
                                 try {
-                                  const compressed = await compressImage(file, 600, 600, 0.7);
+                                  const compressed = await compressImage(file, 1400, 1400, 0.82);
                                   updateProductField(product.id, 'image', compressed);
                                 } catch (err) {
                                   console.error('Failed to compress image:', err);
@@ -959,6 +1184,19 @@ const AdminPanel = ({
                             className="w-full bg-wood-dark/40 border border-gold/15 rounded-lg px-3 py-2 text-beige text-xs"
                             placeholder="Oppure inserisci URL foto"
                           />
+
+                          {product.image && (
+                            <div className="mt-2 rounded-xl border border-gold/15 overflow-hidden bg-gradient-to-br from-wood-medium/45 via-wood-dark/60 to-wood-dark/80 h-36">
+                              <img
+                                src={product.image}
+                                alt={`Anteprima ${product.name}`}
+                                className={`w-full h-full ${isUploadedImage(product.image) ? 'object-contain p-2' : 'object-cover'}`}
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                              />
+                            </div>
+                          )}
                         </div>
 
                         <div className="space-y-3 mt-3 p-3 bg-wood-dark/20 rounded-xl border border-gold/10">
@@ -1033,7 +1271,9 @@ const AdminPanel = ({
 
                         {isPiadineCategory && (
                           <div className="space-y-3 mt-3 p-3 bg-wood-dark/20 rounded-xl border border-gold/10">
-                            <label className="text-xs uppercase tracking-widest text-gold/70">Aggiunte personalizzabili (4 menu)</label>
+                            <label className="text-xs uppercase tracking-widest text-gold/70">
+                              Aggiunte personalizzabili ({PIADINA_ADDON_GROUPS.length} menu)
+                            </label>
 
                             {(product.addonGroups?.length ? product.addonGroups : PIADINA_ADDON_GROUPS).map((group) => (
                               <div key={group.id} className="space-y-2 rounded-lg border border-gold/10 bg-wood-dark/20 p-2.5">
@@ -1185,7 +1425,7 @@ const PrivacyPolicyModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
 
             <section>
               <h3 className="text-gold uppercase tracking-wider text-xs mb-1">Titolare del trattamento</h3>
-              <p>Dragonfly17 Live Music Pub</p>
+              <p>Dragonfly17 Genuine Pub </p>
               <p>Email: diciasettefg@libero.it</p>
             </section>
 
@@ -1331,10 +1571,18 @@ export default function App() {
           const parsed = await res.json();
           if (Array.isArray(parsed) && parsed.length > 0) {
             setMenuData(normalizeMenuDataForPiadine(parsed));
+          } else {
+            // Fallback to local data if remote menu is empty
+            setMenuData(MENU_DATA);
           }
+        } else {
+          // Fallback to local data if remote fetch fails
+          setMenuData(MENU_DATA);
         }
       } catch (err) {
         console.error('Failed to load remote menu', err);
+        // Fallback to local data on error
+        setMenuData(MENU_DATA);
       }
     };
     fetchMenu();
@@ -1421,6 +1669,25 @@ export default function App() {
   // Scroll to top when category changes
   useEffect(() => {
     window.scrollTo(0, 0);
+  }, [currentCategory]);
+
+  // Handle back button to return to home instead of closing the site
+  useEffect(() => {
+    const handlePopState = () => {
+      if (currentCategory) {
+        // If we're viewing a category, go back to home
+        setCurrentCategory(null);
+        window.history.pushState(null, '', window.location.href);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    // Push initial state so back button works
+    window.history.pushState(null, '', window.location.href);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, [currentCategory]);
 
   const filteredProducts = useMemo(() => {
@@ -1525,6 +1792,7 @@ export default function App() {
               <Hero onCategorySelect={(id) => setCurrentCategory(menuData.find(c => c.id === id) || null)} />
               <QuickMenuList categories={menuData} onSelect={setCurrentCategory} />
               <CategoryGrid categories={menuData} onSelect={setCurrentCategory} />
+              <HomeDomicilioHighlight />
               
               <footer className="mt-0 border-t border-gold/20 bg-gradient-to-b from-wood-dark/90 to-wood-dark/95">
                 <div className="px-4 md:px-8 py-3 md:py-3.5 grid grid-cols-[1fr_auto_1fr] items-start gap-4">
@@ -1601,7 +1869,7 @@ export default function App() {
               {filteredProducts.length > 0 ? (
                 filteredProducts.map((product) => (
                   <div key={product.id}>
-                    <ProductCard product={product} compactNoImage={currentCategory.id === 'amari' || currentCategory.id === 'bibite'} />
+                    <ProductCard product={product} compactNoImage={!product.image} categoryId={currentCategory.id} />
                   </div>
                 ))
               ) : (

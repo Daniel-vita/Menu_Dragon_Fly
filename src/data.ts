@@ -25,6 +25,8 @@ export interface Product {
   image: string;
   allergens?: string[];
   format?: string;
+  vegan?: boolean;
+  soldOut?: boolean;
 }
 
 export const PIADINA_ADDON_GROUPS: ProductAddonGroup[] = [
@@ -32,41 +34,70 @@ export const PIADINA_ADDON_GROUPS: ProductAddonGroup[] = [
     id: 'carne',
     name: 'Carne',
     options: [
-      { name: 'Prosciutto crudo', price: '+2.00€' },
-      { name: 'Salsiccia', price: '+2.20€' },
-      { name: 'Speck', price: '+2.00€' }
+      { name: 'Hamburger', price: '+2.00€' },
+      { name: 'Salsiccia', price: '+2.00€' },
+      { name: 'Porchetta', price: '+2.00€' },
+      { name: 'Cotechino', price: '+2.00€' },
+      { name: 'Pollo', price: '+2.00€' }
+    ]
+  },
+  {
+    id: 'affettati',
+    name: 'Affettati',
+    options: [
+      { name: 'Pancetta', price: '+1.00€' },
+      { name: 'Speck', price: '+1.00€' },
+      { name: 'Mortadella', price: '+1.00€' }
     ]
   },
   {
     id: 'formaggi',
     name: 'Formaggi',
     options: [
-      { name: 'Squacquerone', price: '+1.50€' },
-      { name: 'Mozzarella', price: '+1.20€' },
-      { name: 'Scamorza', price: '+1.40€' }
+      { name: 'Scamorza', price: '+1.00€' },
+      { name: 'Provola', price: '+1.00€' },
+      { name: 'Caciocavallo', price: '+1.00€' },
+      { name: 'Cheddar', price: '+1.50€' }
     ]
   },
-  {
+ {
     id: 'verdure',
     name: 'Verdure',
     options: [
-      { name: 'Rucola', price: '+0.80€' },
-      { name: 'Peperoni', price: '+1.00€' },
-      { name: 'Cipolla', price: '+0.70€' }
+      // Verdure a +0.50€
+      { name: 'Lattuga', price: '+0.50€' },
+      { name: 'Rucola', price: '+0.50€' },
+      { name: 'Pomodorini freschi', price: '+0.50€' },
+      { name: 'Pomodori secchi', price: '+0.50€' },
+      { name: 'Cipolla', price: '+0.50€' },
+      
+      // Verdure a +1.00€
+      { name: 'Funghi misti', price: '+1.00€' },
+      { name: 'Porcini', price: '+1.00€' },
+      { name: 'Torzella', price: '+1.00€' },
+      { name: 'Friarielli', price: '+1.00€' },
+      { name: 'Cetrioli sott\'aceto', price: '+1.00€' },
+      { name: 'Zucchine grigliate', price: '+1.00€' },
+      { name: 'Melanzane grigliate', price: '+1.00€' }
     ]
   },
-  {
+{
     id: 'salse',
     name: 'Salse',
     options: [
       { name: 'Maionese', price: '+0.50€' },
-      { name: 'Salsa BBQ', price: '+0.70€' },
-      { name: 'Salsa piccante', price: '+0.70€' }
+      { name: 'Ketchup', price: '+0.50€' },
+      { name: 'Senape', price: '+0.50€' },
+      { name: 'Barbecue', price: '+0.50€' },
+      { name: 'Salsa yogurt', price: '+0.50€' },
+      { name: 'Salsa guacamole', price: '+0.50€' },
+      { name: 'Salsa special', price: '+0.50€' },
+      { name: 'Salsa fly', price: '+0.50€' }
     ]
   }
 ];
 
-export const SERVICE_CHARGE = "2.00€";
+export const SERVICE_CHARGE = "1.50€";
 
 export interface Category {
   id: string;
@@ -99,6 +130,7 @@ export const CATEGORY_IMAGE_FOLDERS: Record<string, string[]> = {
   cocktail: [],
   dolci: [],
   fritti: [],
+  hotdog: [],
   panini: [],
   patatine: [],
   pinse: []
@@ -109,30 +141,86 @@ export const MENU_DATA: Category[] = [
     id: "panini",
     name: "Panini",
     icon: "🍔",
-    image: "https://pixabay.com/get/g6020268201e6f65c825d672fbe2e207452fbc8627a906992cbba50c12f0e694ad595afa88800b4b6ab7d801f9e76162e_1920.jpg",
+    image: "https://images.pexels.com/photos/1639562/pexels-photo-1639562.jpeg?auto=compress&cs=tinysrgb&w=1200",
     products: [
       {
-        id: "p1",
-        name: "Dragonfly17 Burger",
-        description: "Manzo 200g, cheddar, bacon croccante, cipolla caramellata, salsa segreta.",
-        price: "12.50€",
-        image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&q=80&w=800",
-        allergens: ["Glutine", "Lattosio", "Uova"]
+        id: "p4",
+        name: "BIG FLY",
+        description: "Hamburger di scottona 250 gr, pancetta, cheddar, cipolle caramellate, lattuga e pomodoro.",
+        price: "11,00€",
+        image: ""
       },
       {
-        id: "p2",
-        name: "Smoky BBQ",
-        description: "Manzo, provola affumicata, anelli di cipolla, salsa BBQ, lattuga.",
-        price: "11.00€",
-        image: "https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?auto=format&fit=crop&q=80&w=800",
-        allergens: ["Glutine", "Lattosio", "Senape"]
+        id: "p5",
+        name: "DUBLINO",
+        description: "Hamburger di scottona, speck caramellato, 4 formaggi fusi, rucola, pomodoro e salsa BBQ.",
+        price: "10,00€",
+        image: "",
+        soldOut: true
       },
       {
-        id: "p3",
-        name: "Veggie Delight",
-        description: "Burger di ceci, zucchine grigliate, pomodoro, maionese vegana.",
-        price: "10.50€",
-        image: "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&q=80&w=800"
+        id: "p6",
+        name: "KRABBY PATTY",
+        description: "Hamburger di scottona, ketchup, senape, cetrioli sott'aceto, cipolla, lattuga, cheddar e pomodoro.",
+        price: "8,50€",
+        image: "/Panini/Krabby.webp"
+      },
+      {
+        id: "p7",
+        name: "IRPINO",
+        description: "Cotechino irpino, pesto di friarielli, fonduta di caciocavallo.",
+        price: "9,00€",
+        image: ""
+      },
+      {
+        id: "p8",
+        name: "MORTA MIA!",
+        description: "Mortadella alla piastra, pesto di pistacchio, cheddar e stracciatella.",
+        price: "8,00€",
+        image: ""
+      },
+      {
+        id: "p9",
+        name: "BOSCO NOBILE",
+        description: "Hamburger di scottona, pesto di nocciole, fonduta di caciocavallo, funghi porcini e pancetta croccante.",
+        price: "13,00€",
+        image: ""
+      },
+      {
+        id: "p10",
+        name: "LIMMITIELLO",
+        description: "Cotechino, caciocavallo, crema al tartufo e confettura di mirtilli.",
+        price: "11,50€",
+        image: ""
+      },
+      {
+        id: "p11",
+        name: "FIT FLY",
+        description: "Panino ai cereali, pollo grigliato, avocado, pomodoro, lattuga e salsa yogurt.",
+        price: "7,50€",
+        image: ""
+      },
+      {
+        id: "p12",
+        name: "VEG BOOM",
+        description: "Panino ai cereali, hamburger di patate, zucchine grigliate, melanzane grigliate, pomodori secchi e salsa guacamole.",
+        price: "8,00€",
+        image: "/Panini/Krabby.webp",
+        vegan: true
+      },
+      {
+        id: "p13",
+        name: "CHICKEN FLY",
+        description: "Bun morbido, pollo impanato, pancetta croccante, cheddar e salsa speciale.",
+        price: "9,00€",
+        image: ""
+      },
+      {
+        id: "p14",
+        name: "FLY SMASH",
+        description: "Bun morbido, doppio hamburger smash, cheddar, cipolla, cetrioli sott'aceto e salsa fly.",
+        price: "11,00€",
+        image: ""
       }
     ]
   },
@@ -140,52 +228,111 @@ export const MENU_DATA: Category[] = [
     id: "piadine",
     name: "Piadine",
     icon: "🌯",
-    image: "https://pixabay.com/get/g56ae24f9f90166d39e871fe217befdad8d50b1f60dfa89d2f90fbe6fb1051a9e32a195f6903827f11b76c41d78668329_1920.jpg",
+    image: "https://images.pexels.com/photos/4958641/pexels-photo-4958641.jpeg?auto=compress&cs=tinysrgb&w=1200",
     products: [
       {
         id: "pi1",
         name: "Piadina Personalizzabile",
         description: "Base piadina da comporre come vuoi: scegli gli extra qui sotto.",
-        price: "5.00€",
+        price: "3.00€",
         image: "https://pixabay.com/get/g189a821c8f564141566b04d456fba53a9da8072efa9fb5d96e5848ba86993a8006208c5b174b2cb3c9247922fdea30d1_1920.jpg",
         addonGroups: PIADINA_ADDON_GROUPS
       }
     ]
   },
   {
+    id: "hotdog",
+    name: "Hot Dog",
+    icon: "🌭",
+    image: "https://images.pexels.com/photos/4518656/pexels-photo-4518656.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    products: [
+      {
+        id: "hd1",
+        name: "Hot Dog con Wurstel Tedesco",
+        description: "Con cipolla fritta e salsa a scelta.",
+        price: "5,00€",
+        image: ""
+      }
+    ]
+  },
+{
     id: "pinse",
-    name: "Pinse",
+    name: "Pinse Romagnole",
     icon: "🍕",
-    image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=800",
+  image: "https://images.pexels.com/photos/825661/pexels-photo-825661.jpeg?auto=compress&cs=tinysrgb&w=1200",
     products: [
       {
         id: "pn1",
-        name: "Pinsa Margherita",
-        description: "Pomodoro, mozzarella e basilico.",
-        price: "8.50€",
+        name: "Pancetta e Torzella",
+        description: "Mozzarella, pancetta e torzella",
+        price: "12.00€",
         image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=800"
       },
       {
         id: "pn2",
-        name: "Pinsa Prosciutto e Rucola",
-        description: "Mozzarella, prosciutto crudo e rucola fresca.",
+        name: "Piennolo",
+        description: "Mozzarella e pomodoro del piennolo in salsa",
         price: "10.00€",
+        image: "https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?auto=format&fit=crop&q=80&w=800"
+      },
+      {
+        id: "pn3",
+        name: "Salsiccia e Friarielli",
+        description: "Provola salsiccia e friarielli",
+        price: "11.00€",
         image: "https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?auto=format&fit=crop&q=80&w=800"
       }
     ]
   },
   {
-    id: "patane-paesane",
-    name: "Patane Paesane",
+    id: "patatine",
+    name: "Patate Paesane",
     icon: "🥔",
-    image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&q=80&w=800",
+    image: "https://images.pexels.com/photos/1583884/pexels-photo-1583884.jpeg?auto=compress&cs=tinysrgb&w=1200",
     products: [
       {
         id: "pp1",
-        name: "patane Paesane",
-        description: "patane paesane croccanti, servite calde.",
-        price: "5.00€",
-        image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&q=80&w=800"
+        name: "Porzione Classica",
+        description: "Patate paesane classiche.",
+        prices: [
+          { label: "Piccola", value: "3,00€" },
+          { label: "Media", value: "4,00€" },
+          { label: "Grande", value: "5,00€" }
+        ],
+        image: ""
+      },
+      {
+        id: "pp2",
+        name: "Patate Pancetta e Cheddar",
+        description: "Patate paesane con pancetta e cheddar.",
+        prices: [
+          { label: "Piccola", value: "5,50€" },
+          { label: "Media", value: "7,50€" },
+          { label: "Grande", value: "10,50€" }
+        ],
+        image: ""
+      },
+      {
+        id: "pp3",
+        name: "Patate Porchetta e Provola",
+        description: "Patate paesane con porchetta e provola.",
+        prices: [
+          { label: "Piccola", value: "5,00€" },
+          { label: "Media", value: "7,00€" },
+          { label: "Grande", value: "10,00€" }
+        ],
+        image: ""
+      },
+      {
+        id: "pp4",
+        name: "Patate Salsiccia, Caciocavallo e Tartufo",
+        description: "Patate paesane con salsiccia, caciocavallo e tartufo.",
+        prices: [
+          { label: "Piccola", value: "7,00€" },
+          { label: "Media", value: "9,00€" },
+          { label: "Grande", value: "12,00€" }
+        ],
+        image: ""
       }
     ]
   },
@@ -193,28 +340,37 @@ export const MENU_DATA: Category[] = [
     id: "fritti",
     name: "Fritti",
     icon: "🍟",
-    image: "https://pixabay.com/get/g1763d19c94e4d13fe5c4c08d4bdc39d911ea66a89529b24a269e9974c23edbfa3d41b09430955d4b04943a9123f7aafc_1920.jpg",
+    image: "https://images.pexels.com/photos/1893555/pexels-photo-1893555.jpeg?auto=compress&cs=tinysrgb&w=1200",
     products: [
       {
         id: "f1",
-        name: "patane Rustiche",
-        description: "Patate fritte con buccia, sale marino e rosmarino.",
-        price: "4.50€",
-        image: "https://images.unsplash.com/photo-1573016608464-54269945138e?auto=format&fit=crop&q=80&w=800"
+        name: "Mini Involtini Primavera",
+        description: "Mini involtini primavera.",
+        prices: [
+          { label: "Al pz", value: "0,80€" },
+          { label: "Porzione 5 pz", value: "3,50€" }
+        ],
+        image: ""
       },
       {
         id: "f2",
-        name: "Anelli di Cipolla",
-        description: "Anelli di cipolla in pastella alla birra (8 pezzi).",
-        price: "5.50€",
-        image: "https://images.unsplash.com/photo-1639024471283-03518883512d?auto=format&fit=crop&q=80&w=800"
+        name: "Mini Parmigianine di Melanzane",
+        description: "Mini parmigianine di melanzane.",
+        prices: [
+          { label: "Al pz", value: "0,50€" },
+          { label: "Porzione 5 pz", value: "2,00€" }
+        ],
+        image: ""
       },
       {
         id: "f3",
-        name: "Mix Fritti",
-        description: "patane, anelli di cipolla, mozzarelline, crocchette.",
-        price: "9.50€",
-        image: "https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&q=80&w=800"
+        name: "Nuggets Jalapenos Rossi e Formaggio",
+        description: "Nuggets jalapenos rossi e formaggio.",
+        prices: [
+          { label: "Al pz", value: "1,00€" },
+          { label: "Porzione 5 pz", value: "4,50€" }
+        ],
+        image: ""
       }
     ]
   },
@@ -222,21 +378,77 @@ export const MENU_DATA: Category[] = [
     id: "cocktail",
     name: "Cocktail",
     icon: "🍸",
-    image: "https://pixabay.com/get/g8ff6e44b22c7b32ae1071881c32efa623f8e16628b6505c030af73bb190c6c6cb12c2eb84f2f694c942393d527589182_1920.jpg",
+    image: "https://images.pexels.com/photos/1304544/pexels-photo-1304544.jpeg?auto=compress&cs=tinysrgb&w=1200",
     products: [
       {
         id: "c1",
-        name: "Negroni",
-        description: "Gin, Campari, Vermouth Rosso.",
-        price: "8.00€",
-        image: "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=800"
+        name: "Milano-Torino",
+        description: "Vermouth rosso e bitter rosso: l'equilibrio perfetto tra dolce e amaro, classico senza tempo.",
+        price: "4,00€",
+        image: ""
       },
       {
         id: "c2",
-        name: "Old Fashioned",
-        description: "Bourbon, Angostura, zucchero, scorza d'arancia.",
-        price: "9.00€",
-        image: "https://images.unsplash.com/photo-1514218953589-2d7d37efd2dc?auto=format&fit=crop&q=80&w=800"
+        name: "Negroni",
+        description: "Vermouth rosso, bitter rosso e gin. Intenso, deciso, l'icona dell'aperitivo all'italiana.",
+        price: "5,00€",
+        image: ""
+      },
+      {
+        id: "c3",
+        name: "Negroni Sbagliato",
+        description: "Vermouth rosso, bitter rosso e spumante. La versione più frizzante e leggera del celebre cocktail.",
+        price: "5,00€",
+        image: ""
+      },
+      {
+        id: "c4",
+        name: "Americano",
+        description: "Vermouth rosso, bitter rosso e acqua tonica. Lungo, rinfrescante, ideale per un aperitivo senza fretta.",
+        price: "5,00€",
+        image: ""
+      },
+      {
+        id: "c5",
+        name: "Long Island Iced Tea",
+        description: "Vodka, gin, rum bianco, tequila, triple sec, succo di limone, sciroppo di zucchero e una spruzzata di Coca-Cola. Potente e sorprendentemente morbido.",
+        price: "5,00€",
+        image: ""
+      },
+      {
+        id: "c6",
+        name: "Japanese Iced Tea",
+        description: "Vodka, gin, rum bianco, tequila, Midori, succo di limone, sciroppo di zucchero e limonata. La versione fresca e dal carattere verde mela.",
+        price: "5,00€",
+        image: ""
+      },
+      {
+        id: "c7",
+        name: "Moscow Mule",
+        description: "Vodka, succo di lime e ginger beer. Servito nel caratteristico boccale di rame, fresco e speziato.",
+        price: "5,00€",
+        image: ""
+      },
+      {
+        id: "c8",
+        name: "London Mule",
+        description: "Gin, succo di lime e ginger beer. L'eleganza botanica del gin incontra la freschezza piccante dello zenzero.",
+        price: "5,00€",
+        image: ""
+      },
+      {
+        id: "c9",
+        name: "Mexican Mule",
+        description: "Tequila, succo di lime e ginger beer. Un tripudio di freschezza agrodolce con il carattere deciso dell'agave.",
+        price: "5,00€",
+        image: ""
+      },
+      {
+        id: "c10",
+        name: "Jamaican Mule",
+        description: "Rum scuro, succo di lime e ginger beer. Caldo, avvolgente, con note di melassa e spezie.",
+        price: "5,00€",
+        image: ""
       }
     ]
   },
@@ -244,7 +456,7 @@ export const MENU_DATA: Category[] = [
     id: "birre",
     name: "Birre in Bottiglia",
     icon: "🍺",
-    image: "https://images.unsplash.com/photo-1608270861620-7476fef55afe?auto=format&fit=crop&q=80&w=800",
+    image: "https://images.pexels.com/photos/1552630/pexels-photo-1552630.jpeg?auto=compress&cs=tinysrgb&w=1200",
     products: [
       {
         id: "b1",
@@ -387,27 +599,46 @@ export const MENU_DATA: Category[] = [
     id: "birre-artigianali",
     name: "Birre alla Spina",
     icon: "🍻",
-    image: "https://pixabay.com/get/g30fe19f5f64efddafbe3c251076331bd21c937244b1ae1989c02b1a2ae7608e1db602750e6eb040f35afbe787d51f42d_1920.jpg",
+    image: "https://images.pexels.com/photos/1269025/pexels-photo-1269025.jpeg?auto=compress&cs=tinysrgb&w=1200",
     products: [
       {
         id: "ba1",
-        name: "IPA Tropicale",
-        description: "Note di mango e frutto della passione.",
+        name: "Hofmann Pils",
+        description: "Pilsner (5%) - Hofmann, Germania. Note di fiori, crosta di pane e miele, con sfumature di erba tagliata e spezie.",
         prices: [
-          { label: "33cl", value: "7.00€" },
-          { label: "50cl", value: "9.50€" }
+          { label: "0.2 cl", value: "2€" },
+          { label: "0.3 cl", value: "3€" },
+          { label: "0.5 cl", value: "5€" }
         ],
-        image: "https://images.unsplash.com/photo-1566633806327-68e152aaf26d?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "ba2",
-        name: "Stout al Cioccolato",
-        description: "Scura, densa, persistente.",
+        name: "Rascals Mosaic IPA",
+        description: "IPA (6,3%) - Rascals. Fruttata, erbacea e agrumata con finale pulito e fresco.",
         prices: [
-          { label: "33cl", value: "7.50€" },
-          { label: "50cl", value: "10.00€" }
+          { label: "Mezza pinta", value: "3,5€" },
+          { label: "Pinta", value: "6€" }
         ],
-        image: "https://images.unsplash.com/photo-1584225064785-c62a8b43d148?auto=format&fit=crop&q=80&w=800"
+        image: ""
+      },
+      {
+        id: "ba3",
+        name: "Rascals Scotch Ale",
+        description: "Scotch Ale (6,5%) - Rascals. Maltata, colore rubino, note dolci e caramellate con finale secco e tostato.",
+        prices: [
+          { label: "0.4 cl", value: "5€" }
+        ],
+        image: ""
+      },
+      {
+        id: "ba4",
+        name: "Guinness",
+        description: "Stout (4,2%) - Guinness, Irlanda. Birra alla spina con tecnologia MicroDraught, cremosa e iconica.",
+        prices: [
+          { label: "0.5 cl", value: "7€" }
+        ],
+        image: ""
       }
     ]
   },
@@ -415,20 +646,69 @@ export const MENU_DATA: Category[] = [
     id: "bibite",
     name: "Bibite",
     icon: "🥤",
-    image: "https://pixabay.com/get/gbd8d9efeb6925c5b3814b4ae3537737c088fbd0e99f590b84cfa80164cac819ecc2e2bd581c6396f51915b5aeb9b98ea_1920.jpg",
+    image: "https://images.pexels.com/photos/2775860/pexels-photo-2775860.jpeg?auto=compress&cs=tinysrgb&w=1200",
     products: [
       {
         id: "bi1",
-        name: "Coca Cola",
-        description: "33cl in vetro.",
-        price: "3.50€",
+        name: "Coca-Cola",
+        description: "Bottiglietta in vetro.",
+        price: "2,50€",
         image: ""
       },
       {
         id: "bi2",
-        name: "Acqua Naturale/Frizzante",
-        description: "50cl.",
-        price: "1.50€",
+        name: "Pepsi",
+        description: "Bottiglia.",
+        price: "2,50€",
+        image: ""
+      },
+      {
+        id: "bi3",
+        name: "Sprite",
+        description: "Bottiglietta in vetro.",
+        price: "2,50€",
+        image: ""
+      },
+      {
+        id: "bi4",
+        name: "Fanta",
+        description: "Bottiglietta in plastica.",
+        price: "2,50€",
+        image: ""
+      },
+      {
+        id: "bi5",
+        name: "Estathe",
+        description: "Gusti limone o pesca.",
+        price: "2,50€",
+        image: ""
+      },
+      {
+        id: "bi6",
+        name: "Succo Yoga",
+        description: "Bottiglietta.",
+        price: "2,50€",
+        image: ""
+      },
+      {
+        id: "bi7",
+        name: "Gatorade",
+        description: "Bottiglia gialla o arancione.",
+        price: "2,00€",
+        image: ""
+      },
+      {
+        id: "bi8",
+        name: "Acqua Naturale",
+        description: "Bottiglietta.",
+        price: "1,00€",
+        image: ""
+      },
+      {
+        id: "bi9",
+        name: "Acqua Frizzante",
+        description: "Bottiglietta azzurra.",
+        price: "1,00€",
         image: ""
       }
     ]
@@ -437,21 +717,14 @@ export const MENU_DATA: Category[] = [
     id: "dolci",
     name: "Dolci",
     icon: "🍰",
-    image: "https://pixabay.com/get/g485b9e841d1ec7d624a280f09def9526f41843ae07ee38f18f99ae7586d979117801e84830a78e364c5d8e7608436360_1920.jpg",
+    image: "https://images.pexels.com/photos/291528/pexels-photo-291528.jpeg?auto=compress&cs=tinysrgb&w=1200",
     products: [
       {
         id: "d1",
-        name: "Tiramisù della Casa",
-        description: "Fatto a mano con caffè espresso.",
-        price: "6.00€",
-        image: "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&q=80&w=800"
-      },
-      {
-        id: "d2",
-        name: "Cheesecake ai Frutti di Bosco",
-        description: "Fresca e cremosa.",
-        price: "6.00€",
-        image: "https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&q=80&w=800"
+        name: "Cheesecake",
+        description: "Gusti: Lotus, Cioccolato Bianco, Confettura Mirtillo, Confettura Albicocca.",
+        price: "5,50€",
+        image: ""
       }
     ]
   },
@@ -459,148 +732,148 @@ export const MENU_DATA: Category[] = [
     id: "amari",
     name: "Amari",
     icon: "🥃",
-    image: "https://pixabay.com/get/geec1c368c9d2f097d495740ee357bc70068e60dffcb20f30c01969da66b71c706b0a0d2dfcca34726585da23d93d0eff_1920.jpg",
     products: [
       {
         id: "a1",
         name: "Amaro del Capo",
         description: "Dolce ed erbaceo, ideale da bere ghiacciato.",
         price: "2.00€",
-        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "a2",
         name: "Jägermeister",
         description: "Amaro tedesco speziato, a base di 56 erbe.",
         price: "2.00€",
-        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "a3",
         name: "Montenegro",
         description: "Equilibrato, dolce-amaro con note di arancia.",
         price: "2.50€",
-        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "a4",
         name: "Jefferson",
         description: "Amaro calabrese naturale con agrumi e rosmarino.",
         price: "2.50€",
-        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "a5",
         name: "Limoncello",
         description: "Liquore dolce e fresco alle scorze di limone.",
         price: "2.50€",
-        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "a6",
         name: "Vecchia Romagna",
         description: "Storico brandy italiano, morbido e legnoso.",
         price: "2.00€",
-        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "a7",
         name: "Amaro al tartufo",
         description: "Particolare, con note terrose di tartufo.",
         price: "2.00€",
-        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "a8",
         name: "Borsci San Marzano",
         description: "Dolce e liquoroso, con un tocco di rum.",
         price: "2.00€",
-        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "a9",
         name: "Amaro Lucano",
         description: "Profilo balsamico, agrumato e ben bilanciato.",
         price: "2.00€",
-        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "a10",
         name: "Fernet-Branca",
         description: "Intenso, molto amaro e fortemente speziato.",
         price: "2.00€",
-        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "a11",
         name: "Brancamenta",
         description: "Fresco e balsamico, con spiccate note di menta.",
         price: "2.00€",
-        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "a12",
         name: "Liquirizia",
         description: "Liquore denso, dolce-amaro alla radice di liquirizia.",
         price: "2.50€",
-        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "a13",
         name: "Petrus Boonekamp",
         description: "Amarissimo e secco, senza zuccheri aggiunti.",
         price: "2.00€",
-        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "a14",
         name: "Caffè Borghetti",
         description: "Liquore dolce al vero caffè espresso italiano.",
         price: "2.00€",
-        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "a15",
         name: "Averna",
         description: "Morbido, corposo, con note di erbe mediterranee.",
         price: "2.00€",
-        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "a16",
         name: "Baileys",
         description: "Dolce e vellutata crema al whiskey irlandese.",
         price: "2.50€",
-        image: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "g1",
         name: "Diciotto Lune",
         description: "Affinata in botte, morbida con sentori di vaniglia.",
         price: "2.50€",
-        image: "https://images.unsplash.com/photo-1516733968668-dbdce39c46ef?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "g2",
         name: "903 Barricata e Bianca",
         description: "Barricata (calda/speziata) o Bianca (secca/pulita).",
         price: "2.50€",
-        image: "https://images.unsplash.com/photo-1516733968668-dbdce39c46ef?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "g3",
         name: "Poli Bianca / Secca Dry",
         description: "Distillato artigianale veneto, deciso e asciutto.",
         price: "3.00€",
-        image: "https://images.unsplash.com/photo-1516733968668-dbdce39c46ef?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "g4",
         name: "Poli Barricata / Sarpa Oro",
         description: "Invecchiata in legno, aromatica e complessa.",
         price: "3.00€",
-        image: "https://images.unsplash.com/photo-1516733968668-dbdce39c46ef?auto=format&fit=crop&q=80&w=800"
+        image: ""
       }
-    ]
+    ],
+    image: "/Amari.png"
   }
 ];
