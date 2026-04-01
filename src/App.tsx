@@ -110,7 +110,17 @@ const isValidRemoteMenuData = (value: unknown): value is Category[] =>
  */
 const mergeRemoteWithLocal = (remoteData: Category[]): Category[] => {
   const remoteMap = new Map(remoteData.map((cat) => [cat.id, cat]));
-  return MENU_DATA.map((localCat) => remoteMap.get(localCat.id) ?? localCat);
+  const localMap = new Map(MENU_DATA.map((cat) => [cat.id, cat]));
+  
+  const merged = [...remoteData];
+  
+  MENU_DATA.forEach((localCat) => {
+    if (!remoteMap.has(localCat.id)) {
+      merged.push(localCat);
+    }
+  });
+
+  return merged;
 };
 
 type NetlifyIdentityUser = {
@@ -1092,10 +1102,22 @@ const AdminPanel = ({
                   </div>
 
                   <div className="space-y-3">
-                    {selectedCategory.products.map((product, index) => (
-                      <div key={product.id} className="border border-gold/15 rounded-xl p-3 md:p-4 bg-wood-medium/10 space-y-2">
+                    {selectedCategory.products.map((product, index) => {
+                      const colorClasses = [
+                        'border-indigo-500/40 bg-indigo-900/20',
+                        'border-emerald-500/40 bg-emerald-900/20',
+                        'border-amber-500/40 bg-amber-900/20',
+                        'border-rose-500/40 bg-rose-900/20',
+                        'border-cyan-500/40 bg-cyan-900/20',
+                        'border-fuchsia-500/40 bg-fuchsia-900/20'
+                      ][index % 6];
+                      return (
+                      <div key={product.id} className={`border rounded-xl p-3 md:p-4 space-y-3 ${colorClasses}`}>
                         <div className="flex items-center justify-between gap-3">
-                          <p className="text-gold text-sm uppercase tracking-wider">{product.name}</p>
+                          <div className="flex items-center gap-2">
+                            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-wood-dark/50 text-gold/80 text-xs font-bold border border-gold/20">{index + 1}</span>
+                            <p className="text-gold text-sm md:text-base font-bold uppercase tracking-wider">{product.name || 'Nuovo Prodotto'}</p>
+                          </div>
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => moveProduct(product.id, 'up')}
@@ -1346,7 +1368,8 @@ const AdminPanel = ({
                           </div>
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
                     {selectedCategory.products.length === 0 && (
                       <p className="text-beige/55 text-sm italic">Nessun prodotto in questa categoria.</p>
                     )}
@@ -1594,7 +1617,7 @@ export default function App() {
   useEffect(() => {
     const fetchMenu = async () => {
       try {
-        const res = await fetch('/.netlify/functions/menu');
+        const res = await fetch('/.netlify/functions/menu?t=' + new Date().getTime());
         if (!res.ok) {
           console.warn('Remote menu fetch failed with status', res.status, '– using local MENU_DATA.');
           setMenuData(normalizeMenuDataForPiadine(MENU_DATA));
