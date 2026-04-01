@@ -85,6 +85,21 @@ const normalizeMenuDataForPiadine = (data: Category[]): Category[] =>
     };
   });
 
+const isValidMenuCategory = (value: unknown): value is Category => {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<Category>;
+  return (
+    typeof candidate.id === 'string' &&
+    typeof candidate.name === 'string' &&
+    typeof candidate.icon === 'string' &&
+    typeof candidate.image === 'string' &&
+    Array.isArray(candidate.products)
+  );
+};
+
+const isValidRemoteMenuData = (value: unknown): value is Category[] =>
+  Array.isArray(value) && value.length > 0 && value.every(isValidMenuCategory);
+
 type NetlifyIdentityUser = {
   jwt: (forceUpdate?: boolean) => Promise<string>;
   token?: { access_token: string };
@@ -1567,18 +1582,26 @@ export default function App() {
     const fetchMenu = async () => {
       try {
         const res = await fetch('/.netlify/functions/menu');
-        if (res.ok) {
-          const parsed = await res.json();
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setMenuData(normalizeMenuDataForPiadine(parsed));
-          } else {
-            // Fallback to local data if remote menu is empty
-            setMenuData(MENU_DATA);
-          }
-        } else {
-          // Fallback to local data if remote fetch fails
+        if (!res.ok) {
           setMenuData(MENU_DATA);
+          return;
         }
+
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.toLowerCase().includes('application/json')) {
+          console.warn('Remote menu endpoint did not return JSON. Using local MENU_DATA fallback.');
+          setMenuData(MENU_DATA);
+          return;
+        }
+
+        const parsed = await res.json();
+        if (isValidRemoteMenuData(parsed)) {
+          setMenuData(normalizeMenuDataForPiadine(parsed));
+          return;
+        }
+
+        console.warn('Remote menu payload is invalid or empty. Using local MENU_DATA fallback.');
+        setMenuData(MENU_DATA);
       } catch (err) {
         console.error('Failed to load remote menu', err);
         // Fallback to local data on error

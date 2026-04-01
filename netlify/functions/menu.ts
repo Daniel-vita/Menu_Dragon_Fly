@@ -10,7 +10,9 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
   };
 
   try {
-    connectLambda(event);
+    // Netlify runtime injects blobs metadata at execution time.
+    // Cast keeps local TS checks compatible with the @netlify/blobs signature.
+    connectLambda(event as any);
 
     if (event.httpMethod === 'OPTIONS') {
       return { statusCode: 200, headers, body: '' };
