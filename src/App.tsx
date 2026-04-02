@@ -90,11 +90,11 @@ const isValidRemoteMenuData = (value: unknown): value is Category[] =>
 
 /**
  * Merges remote Blob data with local MENU_DATA.
- * - Categories present in both remote and local → use remote version (admin edits).
+ * - Categories present in both remote and local → use remote version as-is (admin edits win on every field).
  * - Categories only in local (new categories added in code) → use local fallback.
  * - Categories only in remote (legacy/orphan) → discarded.
- * This ensures new categories added to MENU_DATA always appear, even if the
- * Netlify Blob hasn't been re-saved since the new category was introduced.
+ * This ensures admin updates always have priority while still showing newly added
+ * local categories when the Blob has not been updated yet.
  */
 const mergeRemoteWithLocal = (remoteData: Category[]): Category[] => {
   const localMap = new Map(MENU_DATA.map((cat) => [cat.id, cat]));
@@ -103,12 +103,8 @@ const mergeRemoteWithLocal = (remoteData: Category[]): Category[] => {
     const localCat = localMap.get(remoteCat.id);
     if (!localCat) return remoteCat;
 
-    return {
-      ...remoteCat,
-      // ✅ image e icon vengono SEMPRE dal codice, mai dal Blob
-      image: localCat.image || remoteCat.image,
-      icon: localCat.icon || remoteCat.icon,
-    };
+    // If category exists remotely, keep the remote/admin version untouched.
+    return remoteCat;
   });
 
   // Categorie presenti nel codice ma non nel Blob → aggiungile
