@@ -418,11 +418,13 @@ const ProductCard = ({
 }) => {
   const [showAllergens, setShowAllergens] = useState(false);
   const [openAddonGroupId, setOpenAddonGroupId] = useState<string | null>(null);
+  const pricedEntries = (product.prices || []).filter((entry) => !!entry.value?.trim());
+  const flavorEntries = (product.prices || []).filter((entry) => !entry.value?.trim());
 
   const displayPrice =
     product.price ||
-    (product.prices && product.prices.length > 0 ? product.prices.map((entry) => `${entry.label} ${entry.value}`).join(' / ') : '');
-  const hasMultiPrices = !!product.prices && product.prices.length > 0;
+    (pricedEntries.length > 0 ? pricedEntries.map((entry) => `${entry.label} ${entry.value}`).join(' / ') : '');
+  const hasMultiPrices = pricedEntries.length > 0;
   const showCompactMultiPrices = compactNoImage && hasMultiPrices;
 
   useEffect(() => {
@@ -464,11 +466,21 @@ const ProductCard = ({
 
         {showCompactMultiPrices && (
           <div className="flex flex-wrap gap-2 mt-3">
-            {product.prices!.map((p, i) => (
+            {pricedEntries.map((p, i) => (
               <div key={i} className="flex flex-col items-center bg-wood-dark/50 border border-gold/20 rounded-xl px-3 py-1 min-w-[72px]">
                 <span className="text-[10px] text-gold/60 uppercase font-bold">{p.label}</span>
                 <span className="text-cream font-bold">{p.value}</span>
               </div>
+            ))}
+          </div>
+        )}
+        {flavorEntries.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {flavorEntries.map((flavor, i) => (
+              <span key={i} className="inline-flex items-center gap-1 rounded-full border border-gold/25 bg-wood-dark/50 px-3 py-1 text-xs font-semibold text-beige/90">
+                
+                {flavor.label}
+              </span>
             ))}
           </div>
         )}
@@ -632,13 +644,22 @@ const ProductCard = ({
           )}
         </AnimatePresence>
 
-        {product.prices && (
+        {pricedEntries.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-4">
-            {product.prices.map((p, i) => (
+            {pricedEntries.map((p, i) => (
               <div key={i} className="flex flex-col items-center bg-wood-dark/50 border border-gold/20 rounded-xl px-3 py-1 min-w-[60px]">
                 <span className="text-[10px] text-gold/60 uppercase font-bold">{p.label}</span>
                 <span className="text-cream font-bold">{p.value}</span>
               </div>
+            ))}
+          </div>
+        )}
+        {flavorEntries.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {flavorEntries.map((flavor, i) => (
+              <span key={i} className="inline-flex items-center gap-1 rounded-full border border-gold/25 bg-wood-dark/50 px-3 py-1 text-xs font-semibold text-beige/90">
+                {flavor.label}
+              </span>
             ))}
           </div>
         )}

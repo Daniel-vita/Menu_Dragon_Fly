@@ -1,6 +1,6 @@
 export interface ProductPrice {
   label: string;
-  value: string;
+  value?: string;
 }
 
 export interface ProductAddon {
@@ -91,11 +91,41 @@ export const PIADINA_ADDON_GROUPS: ProductAddonGroup[] = [
       { name: 'Barbecue', price: '+0.50€' },
       { name: 'Salsa yogurt', price: '+0.50€' },
       { name: 'Salsa guacamole', price: '+0.50€' },
-      { name: 'Salsa special', price: '+0.50€' },
-      { name: 'Salsa fly', price: '+0.50€' }
+      { name: 'Salsa special', price: '+1.00€' },
+      { name: 'Salsa fly', price: '+1.00€' }
     ]
   }
 ];
+
+export const HOTDOG_ADDON_GROUPS: ProductAddonGroup[] = [
+
+ 
+ 
+ {
+    id: 'Aggiunte',
+    name: 'Aggiunte',
+    options: [
+      // Verdure a +0.50€
+      { name: 'Cipolla Fritta Croccante', price: '+1.00€' },
+      { name: 'Patatine Croccanti', price: '+1.00€' },
+    ]
+  },
+{
+    id: 'salse',
+    name: 'Salse',
+     options: [
+      { name: 'Maionese', price: '+0.50€' },
+      { name: 'Ketchup', price: '+0.50€' },
+      { name: 'Senape', price: '+0.50€' },
+      { name: 'Barbecue', price: '+0.50€' },
+      { name: 'Salsa yogurt', price: '+0.50€' },
+      { name: 'Salsa guacamole', price: '+0.50€' },
+      { name: 'Salsa special', price: '+1.00€' },
+      { name: 'Salsa fly', price: '+1.00€' }
+    ]
+  }
+];
+
 
 export const SERVICE_CHARGE = "1.50€";
 
@@ -148,15 +178,14 @@ export const MENU_DATA: Category[] = [
         name: "BIG FLY",
         description: "Hamburger di scottona 250 gr, pancetta, cheddar, cipolle caramellate, lattuga e pomodoro.",
         price: "11,00€",
-        image: ""
+        image: "/Panini/big_fly.avif"
       },
       {
         id: "p5",
         name: "DUBLINO",
         description: "Hamburger di scottona, speck caramellato, 4 formaggi fusi, rucola, pomodoro e salsa BBQ.",
         price: "10,00€",
-        image: "",
-        soldOut: true
+        image: "/Panini/dublino.avif",
       },
       {
         id: "p6",
@@ -205,7 +234,7 @@ export const MENU_DATA: Category[] = [
         name: "VEG BOOM",
         description: "Panino ai cereali, hamburger di patate, zucchine grigliate, melanzane grigliate, pomodori secchi e salsa guacamole.",
         price: "8,00€",
-        image: "/Panini/Krabby.webp",
+        image: "",
         vegan: true
       },
       {
@@ -220,6 +249,12 @@ export const MENU_DATA: Category[] = [
         name: "FLY SMASH",
         description: "Bun morbido, doppio hamburger smash, cheddar, cipolla, cetrioli sott'aceto e salsa fly.",
         price: "11,00€",
+        image: ""
+      },{
+        id: "p15",
+        name: "IL ROMANO",
+        description: "Cheddar, trito di rucola, pomodori secchi, porchetta e provola",
+        price: "9,00€",
         image: ""
       }
     ]
@@ -249,9 +284,10 @@ export const MENU_DATA: Category[] = [
       {
         id: "hd1",
         name: "Hot Dog con Wurstel Tedesco",
-        description: "Con cipolla fritta e salsa a scelta.",
-        price: "5,00€",
-        image: ""
+        description: "Hot Dog con Wurstel Tedesco ed una salsa a scelta.",
+        price: "4,00€",
+        image: "https://images.pexels.com/photos/4518656/pexels-photo-4518656.jpeg?auto=compress&cs=tinysrgb&w=1200",
+        addonGroups: HOTDOG_ADDON_GROUPS
       }
     ]
   },
@@ -266,21 +302,21 @@ export const MENU_DATA: Category[] = [
         name: "Pancetta e Torzella",
         description: "Mozzarella, pancetta e torzella",
         price: "12.00€",
-        image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "pn2",
         name: "Piennolo",
         description: "Mozzarella e pomodoro del piennolo in salsa",
         price: "10.00€",
-        image: "https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?auto=format&fit=crop&q=80&w=800"
+        image: ""
       },
       {
         id: "pn3",
         name: "Salsiccia e Friarielli",
         description: "Provola salsiccia e friarielli",
         price: "11.00€",
-        image: "https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?auto=format&fit=crop&q=80&w=800"
+        image: ""
       }
     ]
   },
@@ -350,7 +386,7 @@ export const MENU_DATA: Category[] = [
           { label: "Al pz", value: "0,80€" },
           { label: "Porzione 5 pz", value: "3,50€" }
         ],
-        image: ""
+        image: "/Copertina/fritti.avif"
       },
       {
         id: "f2",
@@ -384,71 +420,71 @@ export const MENU_DATA: Category[] = [
         id: "c1",
         name: "Milano-Torino",
         description: "Vermouth rosso e bitter rosso: l'equilibrio perfetto tra dolce e amaro, classico senza tempo.",
-        price: "4,00€",
-        image: ""
+        price: "5,00€",
+        image: "https://images.pexels.com/photos/34437245/pexels-photo-34437245.jpeg?auto=compress&cs=tinysrgb&w=1200"
       },
       {
         id: "c2",
         name: "Negroni",
         description: "Vermouth rosso, bitter rosso e gin. Intenso, deciso, l'icona dell'aperitivo all'italiana.",
         price: "5,00€",
-        image: ""
+        image: "https://images.pexels.com/photos/1304540/pexels-photo-1304540.jpeg?auto=compress&cs=tinysrgb&w=1200"
       },
       {
         id: "c3",
         name: "Negroni Sbagliato",
         description: "Vermouth rosso, bitter rosso e spumante. La versione più frizzante e leggera del celebre cocktail.",
         price: "5,00€",
-        image: ""
+        image: "https://images.pexels.com/photos/29707990/pexels-photo-29707990.jpeg?auto=compress&cs=tinysrgb&w=1200"
       },
       {
         id: "c4",
         name: "Americano",
         description: "Vermouth rosso, bitter rosso e acqua tonica. Lungo, rinfrescante, ideale per un aperitivo senza fretta.",
         price: "5,00€",
-        image: ""
+        image: "https://images.pexels.com/photos/30309702/pexels-photo-30309702.jpeg?auto=compress&cs=tinysrgb&w=1200"
       },
       {
         id: "c5",
         name: "Long Island Iced Tea",
         description: "Vodka, gin, rum bianco, tequila, triple sec, succo di limone, sciroppo di zucchero e una spruzzata di Coca-Cola. Potente e sorprendentemente morbido.",
         price: "5,00€",
-        image: ""
+        image: "https://images.pexels.com/photos/13573779/pexels-photo-13573779.jpeg?auto=compress&cs=tinysrgb&w=1200"
       },
       {
         id: "c6",
         name: "Japanese Iced Tea",
         description: "Vodka, gin, rum bianco, tequila, Midori, succo di limone, sciroppo di zucchero e limonata. La versione fresca e dal carattere verde mela.",
         price: "5,00€",
-        image: ""
+        image: "https://images.pexels.com/photos/17612834/pexels-photo-17612834.jpeg?auto=compress&cs=tinysrgb&w=1200"
       },
       {
         id: "c7",
         name: "Moscow Mule",
         description: "Vodka, succo di lime e ginger beer. Servito nel caratteristico boccale di rame, fresco e speziato.",
         price: "5,00€",
-        image: ""
+        image: "https://images.pexels.com/photos/34875052/pexels-photo-34875052.jpeg?auto=compress&cs=tinysrgb&w=1200"
       },
       {
         id: "c8",
         name: "London Mule",
         description: "Gin, succo di lime e ginger beer. L'eleganza botanica del gin incontra la freschezza piccante dello zenzero.",
         price: "5,00€",
-        image: ""
+        image: "https://images.pexels.com/photos/34875057/pexels-photo-34875057.jpeg?auto=compress&cs=tinysrgb&w=1200"
       },
       {
         id: "c9",
         name: "Mexican Mule",
         description: "Tequila, succo di lime e ginger beer. Un tripudio di freschezza agrodolce con il carattere deciso dell'agave.",
         price: "5,00€",
-        image: ""
+        image: "https://images.pexels.com/photos/15813473/pexels-photo-15813473.jpeg?auto=compress&cs=tinysrgb&w=1200"
       },
       {
         id: "c10",
         name: "Jamaican Mule",
         description: "Rum scuro, succo di lime e ginger beer. Caldo, avvolgente, con note di melassa e spezie.",
         price: "5,00€",
-        image: ""
+        image: "https://images.pexels.com/photos/34947136/pexels-photo-34947136.jpeg?auto=compress&cs=tinysrgb&w=1200"
       }
     ]
   },
@@ -592,6 +628,15 @@ export const MENU_DATA: Category[] = [
         image: "/Birre_Bottiglia/löwenbrau.webp",
         allergens: ["Glutine"],
         format: "33cl"
+      },
+      {
+        id: "b16",
+        name: "Bud",
+        description: "Lager chiara dal gusto leggero e scorrevole, con finale pulito e dissetante.",
+        price: "3€",
+        image: "",
+        allergens: ["Glutine"],
+        format: "33cl"
       }
     ]
   },
@@ -657,57 +702,72 @@ export const MENU_DATA: Category[] = [
       },
       {
         id: "bi2",
-        name: "Pepsi",
-        description: "Bottiglia.",
+        name: "Coca-Cola 0",
+        description: "Bottiglietta in vetro.",
         price: "2,50€",
         image: ""
       },
       {
         id: "bi3",
-        name: "Sprite",
+        name: "Pepsi",
         description: "Bottiglietta in vetro.",
         price: "2,50€",
         image: ""
       },
       {
         id: "bi4",
-        name: "Fanta",
-        description: "Bottiglietta in plastica.",
+        name: "Sprite",
+        description: "Bottiglietta in vetro.",
         price: "2,50€",
         image: ""
       },
       {
         id: "bi5",
-        name: "Estathe",
-        description: "Gusti limone o pesca.",
+        name: "Fanta",
+        description: "Bottiglietta in vetro.",
         price: "2,50€",
         image: ""
       },
       {
         id: "bi6",
-        name: "Succo Yoga",
-        description: "Bottiglietta.",
+        name: "Estathe",
+        description: "Bottiglietta in vetro.",
         price: "2,50€",
+        prices: [
+          { label: "Limone" },
+          { label: "Pesca" }
+        ],
         image: ""
       },
       {
         id: "bi7",
-        name: "Gatorade",
-        description: "Bottiglia gialla o arancione.",
-        price: "2,00€",
+        name: "Succo Yoga",
+        description: "Bottiglietta in vetro.",
+        price: "2,50€",
         image: ""
       },
       {
         id: "bi8",
-        name: "Acqua Naturale",
-        description: "Bottiglietta.",
-        price: "1,00€",
+        name: "Energade",
+        description: "Bottiglietta in plastica.",
+        price: "2,00€",
+        prices: [
+          { label: "Arancia" },
+          { label: "Limone" }
+        ],
         image: ""
       },
       {
         id: "bi9",
+        name: "Acqua Naturale",
+        description: "Bottiglietta in plastica.",
+        price: "1,00€",
+        image: ""
+      },
+      {
+        id: "bi10",
         name: "Acqua Frizzante",
-        description: "Bottiglietta azzurra.",
+        description: "Bottiglietta in plastica",
         price: "1,00€",
         image: ""
       }
@@ -722,8 +782,14 @@ export const MENU_DATA: Category[] = [
       {
         id: "d1",
         name: "Cheesecake",
-        description: "Gusti: Lotus, Cioccolato Bianco, Confettura Mirtillo, Confettura Albicocca.",
+        description: "Il grande classico americano: base croccante di biscotti, cuore cremoso e topping a scelta. Semplicemente deliziosa.",
         price: "5,50€",
+         prices: [
+          { label: "Lotus" },
+          { label: "Cioccolato Bianco" },
+          { label: "Confettura Mirtillo" },
+          { label: "Confettura Albicocca" }
+        ],
         image: ""
       }
     ]
