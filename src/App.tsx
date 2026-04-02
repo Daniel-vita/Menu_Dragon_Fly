@@ -137,7 +137,7 @@ declare global {
 }
 
 // --- Image Compression Utility ---
-const compressImage = (file: File, maxWidth = 1400, maxHeight = 1400, quality = 0.82): Promise<string> => {
+const compressImage = (file: File, maxWidth = 2200, maxHeight = 2200, quality = 0.9): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -166,8 +166,8 @@ const compressImage = (file: File, maxWidth = 1400, maxHeight = 1400, quality = 
         if (!ctx) return resolve(img.src);
         
         ctx.drawImage(img, 0, 0, width, height);
-        // Compress as WebP for smaller size if supported, fallback to JPEG
-        resolve(canvas.toDataURL('image/webp', quality));
+        const mimeType = file.type === 'image/png' ? 'image/png' : file.type === 'image/webp' ? 'image/webp' : 'image/jpeg';
+        resolve(canvas.toDataURL(mimeType, quality));
       };
       img.onerror = (e) => reject(e);
     };
@@ -320,9 +320,7 @@ const CategoryGrid = ({ categories, onSelect }: { categories: Category[]; onSele
                 alt={cat.name} 
                 loading="lazy"
                 decoding="async"
-                className={`w-full h-full transition-transform duration-500 group-hover:scale-110 ${
-                  isUploadedImage(cat.image) ? 'object-contain p-2' : 'object-cover'
-                }`}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                 referrerPolicy="no-referrer"
               />
             </div>
@@ -562,7 +560,7 @@ const ProductCard = ({
               alt={product.name} 
               loading="lazy"
               decoding="async"
-              className={`w-full h-full ${isUploadedImage(product.image) ? 'object-contain p-2' : 'object-cover'}`}
+              className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
             />
           </div>
@@ -1323,7 +1321,7 @@ const AdminPanel = ({
                               <img
                                 src={product.image}
                                 alt={`Anteprima ${product.name}`}
-                                className={`w-full h-full ${isUploadedImage(product.image) ? 'object-contain p-2' : 'object-cover'}`}
+                                className="w-full h-full object-cover"
                                 loading="lazy"
                                 decoding="async"
                                 referrerPolicy="no-referrer"
