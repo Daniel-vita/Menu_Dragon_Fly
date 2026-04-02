@@ -97,13 +97,23 @@ const isValidRemoteMenuData = (value: unknown): value is Category[] =>
  * Netlify Blob hasn't been re-saved since the new category was introduced.
  */
 const mergeRemoteWithLocal = (remoteData: Category[]): Category[] => {
-  const remoteMap = new Map(remoteData.map((cat) => [cat.id, cat]));
   const localMap = new Map(MENU_DATA.map((cat) => [cat.id, cat]));
-  
-  const merged = [...remoteData];
-  
+
+  const merged = remoteData.map((remoteCat) => {
+    const localCat = localMap.get(remoteCat.id);
+    if (!localCat) return remoteCat;
+
+    return {
+      ...remoteCat,
+      // ✅ image e icon vengono SEMPRE dal codice, mai dal Blob
+      image: localCat.image || remoteCat.image,
+      icon: localCat.icon || remoteCat.icon,
+    };
+  });
+
+  // Categorie presenti nel codice ma non nel Blob → aggiungile
   MENU_DATA.forEach((localCat) => {
-    if (!remoteMap.has(localCat.id)) {
+    if (!merged.find((cat) => cat.id === localCat.id)) {
       merged.push(localCat);
     }
   });
