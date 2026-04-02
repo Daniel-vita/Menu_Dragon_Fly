@@ -141,7 +141,7 @@ export const MENU_DATA: Category[] = [
     id: "panini",
     name: "Panini",
     icon: "🍔",
-    image: "https://images.pexels.com/photos/1639562/pexels-photo-1639562.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    image: "/Copertina/Panini.avif",
     products: [
       {
         id: "p4",
@@ -228,14 +228,14 @@ export const MENU_DATA: Category[] = [
     id: "piadine",
     name: "Piadine",
     icon: "🌯",
-    image: "https://images.pexels.com/photos/4958641/pexels-photo-4958641.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    image: "/Copertina/piadine.avif",
     products: [
       {
         id: "pi1",
         name: "Piadina Personalizzabile",
         description: "Base piadina da comporre come vuoi: scegli gli extra qui sotto.",
         price: "3.00€",
-        image: "https://pixabay.com/get/g189a821c8f564141566b04d456fba53a9da8072efa9fb5d96e5848ba86993a8006208c5b174b2cb3c9247922fdea30d1_1920.jpg",
+        image: "/Copertina/piadine.avif",
         addonGroups: PIADINA_ADDON_GROUPS
       }
     ]
@@ -259,7 +259,7 @@ export const MENU_DATA: Category[] = [
     id: "pinse",
     name: "Pinse Romagnole",
     icon: "🍕",
-  image: "https://images.pexels.com/photos/825661/pexels-photo-825661.jpeg?auto=compress&cs=tinysrgb&w=1200",
+  image: "/Copertina/Pinse.avif",
     products: [
       {
         id: "pn1",
@@ -288,7 +288,7 @@ export const MENU_DATA: Category[] = [
     id: "patatine",
     name: "Patate Paesane",
     icon: "🥔",
-    image: "https://images.pexels.com/photos/1583884/pexels-photo-1583884.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    image: "/Copertina/Patane.avif",
     products: [
       {
         id: "pp1",
@@ -340,7 +340,7 @@ export const MENU_DATA: Category[] = [
     id: "fritti",
     name: "Fritti",
     icon: "🍟",
-    image: "https://images.pexels.com/photos/1893555/pexels-photo-1893555.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    image: "/Copertina/fritti.avif",
     products: [
       {
         id: "f1",
@@ -456,7 +456,7 @@ export const MENU_DATA: Category[] = [
     id: "birre",
     name: "Birre in Bottiglia",
     icon: "🍺",
-    image: "https://images.pexels.com/photos/1552630/pexels-photo-1552630.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    image: "/Birre_Bottiglia/alpine.webp",
     products: [
       {
         id: "b1",
@@ -599,7 +599,7 @@ export const MENU_DATA: Category[] = [
     id: "birre-artigianali",
     name: "Birre alla Spina",
     icon: "🍻",
-    image: "https://images.pexels.com/photos/1269025/pexels-photo-1269025.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    image: "/Copertina/birre_artigianali.avif",
     products: [
       {
         id: "ba1",
