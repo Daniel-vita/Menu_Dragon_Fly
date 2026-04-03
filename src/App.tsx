@@ -18,6 +18,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { MENU_DATA, Category, Product, ProductAddon, ProductAddonGroup, PIADINA_ADDON_GROUPS, SERVICE_CHARGE, CATEGORY_IMAGE_FOLDERS } from './data';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
 
 const MENU_STORAGE_KEY = 'dragonfly-menu-data-v1';
 const IMAGE_UPLOAD_HELPER_URL = 'https://postimages.org/';
@@ -117,24 +118,265 @@ const mergeRemoteWithLocal = (remoteData: Category[]): Category[] => {
   return merged;
 };
 
-type NetlifyIdentityUser = {
-  jwt: (forceUpdate?: boolean) => Promise<string>;
-  token?: { access_token: string };
+type DbAddonOption = {
+  name: string;
+  price: string;
+  sort_order: number | null;
 };
 
-type NetlifyIdentityApi = {
-  init: (options?: Record<string, unknown>) => void;
-  on: (event: string, callback: (user?: unknown) => void) => void;
-  currentUser: () => NetlifyIdentityUser | null;
-  open: (panel?: string) => void;
-  logout: () => void;
+type DbAddonGroup = {
+  id: string;
+  name: string;
+  sort_order: number | null;
+  addon_options?: DbAddonOption[];
 };
 
-declare global {
-  interface Window {
-    netlifyIdentity?: NetlifyIdentityApi;
+type DbProductPrice = {
+  label: string;
+  value: string | null;
+  position: number | null;
+};
+
+type DbProductAllergen = {
+  allergen: string;
+  position: number | null;
+};
+
+type DbProduct = {
+  id: string;
+  name: string;
+  description: string | null;
+  price: string | null;
+  image: string | null;
+  format: string | null;
+  vegan: boolean | null;
+  sold_out: boolean | null;
+  sort_order: number | null;
+  product_prices?: DbProductPrice[];
+  product_allergens?: DbProductAllergen[];
+  addon_groups?: DbAddonGroup[];
+};
+
+type DbCategory = {
+  id: string;
+  name: string;
+  icon: string;
+  image: string | null;
+  sort_order: number | null;
+  products?: DbProduct[];
+};
+
+const normalizeAddonGroupId = (productId: string, groupId: string): string => `${productId}__${groupId}`;
+
+const denormalizeAddonGroupId = (rawId: string): string => {
+  const separator = '__';
+  const separatorIndex = rawId.indexOf(separator);
+  if (separatorIndex < 0) {
+    return rawId;
   }
-}
+  return rawId.slice(separatorIndex + separator.length) || rawId;
+};
+
+const mapDbToMenuData = (categories: DbCategory[]): Category[] =>
+  categories
+    .slice()
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((category) => ({
+      id: category.id,
+      name: category.name,
+      icon: category.icon,
+      image: category.image || '',
+      products: (category.products || [])
+        .slice()
+        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+        .map((product) => ({
+          id: product.id,
+          name: product.name,
+          description: product.description || '',
+          price: product.price || undefined,
+          image: product.image || '',
+          format: product.format || undefined,
+          vegan: !!product.vegan,
+          soldOut: !!product.sold_out,
+          prices: (product.product_prices || [])
+            .slice()
+            .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+            .map((entry) => ({
+              label: entry.label,
+              value: entry.value || undefined,
+            })),
+          allergens: (product.product_allergens || [])
+            .slice()
+            .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+            .map((entry) => entry.allergen),
+          addonGroups: (product.addon_groups || [])
+            .slice()
+            .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+            .map((group) => ({
+              id: denormalizeAddonGroupId(group.id),
+              name: group.name,
+              options: (group.addon_options || [])
+                .slice()
+                .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+                .map((option) => ({
+                  name: option.name,
+                  price: option.price,
+                })),
+            })),
+        })),
+    }));
+
+const fetchMenuFromSupabase = async (): Promise<Category[] | null> => {
+  if (!isSupabaseConfigured() || !supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from('categories')
+    .select(`
+      id, name, icon, image, sort_order,
+      products (
+        id, name, description, price, image, format, vegan, sold_out, sort_order,
+        product_prices ( label, value, position ),
+        product_allergens ( allergen, position ),
+        addon_groups (
+          id, name, sort_order,
+          addon_options ( name, price, sort_order )
+        )
+      )
+    `);
+
+  if (error || !data || data.length === 0) {
+    return null;
+  }
+
+  return mapDbToMenuData(data as DbCategory[]);
+};
+
+const syncMenuToSupabase = async (data: Category[]): Promise<{ ok: boolean; error?: string }> => {
+  if (!isSupabaseConfigured() || !supabase) {
+    return { ok: false, error: 'Supabase non configurato. Imposta VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.' };
+  }
+
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !sessionData.session) {
+    return { ok: false, error: 'Sessione admin non valida. Effettua nuovamente il login.' };
+  }
+
+  const { data: adminRow, error: adminError } = await supabase
+    .from('admins')
+    .select('id')
+    .eq('user_id', sessionData.session.user.id)
+    .maybeSingle();
+
+  if (adminError || !adminRow) {
+    return { ok: false, error: 'Utente autenticato ma non autorizzato come admin.' };
+  }
+
+  const categoriesPayload = data.map((category, categoryIndex) => ({
+    id: category.id,
+    name: category.name,
+    icon: category.icon,
+    image: category.image || '',
+    sort_order: categoryIndex,
+  }));
+
+  const productsPayload: Array<Record<string, unknown>> = [];
+  const pricesPayload: Array<Record<string, unknown>> = [];
+  const allergensPayload: Array<Record<string, unknown>> = [];
+  const addonGroupsPayload: Array<Record<string, unknown>> = [];
+  const addonOptionsPayload: Array<Record<string, unknown>> = [];
+
+  data.forEach((category, categoryIndex) => {
+    category.products.forEach((product, productIndex) => {
+      productsPayload.push({
+        id: product.id,
+        category_id: category.id,
+        name: product.name,
+        description: product.description || '',
+        price: product.price || null,
+        image: product.image || '',
+        format: product.format || null,
+        vegan: !!product.vegan,
+        sold_out: !!product.soldOut,
+        sort_order: productIndex,
+      });
+
+      (product.prices || []).forEach((entry, entryIndex) => {
+        pricesPayload.push({
+          product_id: product.id,
+          label: entry.label,
+          value: entry.value || null,
+          position: entryIndex,
+        });
+      });
+
+      (product.allergens || []).forEach((allergen, allergenIndex) => {
+        allergensPayload.push({
+          product_id: product.id,
+          allergen,
+          position: allergenIndex,
+        });
+      });
+
+      (product.addonGroups || []).forEach((group, groupIndex) => {
+        const normalizedGroupId = normalizeAddonGroupId(product.id, group.id);
+        addonGroupsPayload.push({
+          id: normalizedGroupId,
+          product_id: product.id,
+          name: group.name,
+          sort_order: groupIndex,
+        });
+
+        (group.options || []).forEach((option, optionIndex) => {
+          addonOptionsPayload.push({
+            addon_group_id: normalizedGroupId,
+            name: option.name,
+            price: option.price,
+            sort_order: optionIndex,
+          });
+        });
+      });
+    });
+  });
+
+  const { error: wipeCategoriesError } = await supabase.from('categories').delete().neq('id', '__none__');
+  if (wipeCategoriesError) {
+    return { ok: false, error: wipeCategoriesError.message };
+  }
+
+  if (categoriesPayload.length > 0) {
+    const { error } = await supabase.from('categories').insert(categoriesPayload);
+    if (error) return { ok: false, error: error.message };
+  }
+
+  if (productsPayload.length > 0) {
+    const { error } = await supabase.from('products').insert(productsPayload);
+    if (error) return { ok: false, error: error.message };
+  }
+
+  if (pricesPayload.length > 0) {
+    const { error } = await supabase.from('product_prices').insert(pricesPayload);
+    if (error) return { ok: false, error: error.message };
+  }
+
+  if (allergensPayload.length > 0) {
+    const { error } = await supabase.from('product_allergens').insert(allergensPayload);
+    if (error) return { ok: false, error: error.message };
+  }
+
+  if (addonGroupsPayload.length > 0) {
+    const { error } = await supabase.from('addon_groups').insert(addonGroupsPayload);
+    if (error) return { ok: false, error: error.message };
+  }
+
+  if (addonOptionsPayload.length > 0) {
+    const { error } = await supabase.from('addon_options').insert(addonOptionsPayload);
+    if (error) return { ok: false, error: error.message };
+  }
+
+  return { ok: true };
+};
 
 // --- Image Compression Utility ---
 const compressImage = (file: File, maxWidth = 2200, maxHeight = 2200, quality = 0.9): Promise<string> => {
@@ -1482,42 +1724,68 @@ const AdminPanel = ({
 
 const AdminAccessGate = ({
   isAuthReady,
-  hasIdentity,
-  onOpenLogin,
+  isSupabaseReady,
+  email,
+  password,
+  onEmailChange,
+  onPasswordChange,
+  onLogin,
   onOpenRecovery,
+  isLoading,
 }: {
   isAuthReady: boolean;
-  hasIdentity: boolean;
-  onOpenLogin: () => void;
+  isSupabaseReady: boolean;
+  email: string;
+  password: string;
+  onEmailChange: (value: string) => void;
+  onPasswordChange: (value: string) => void;
+  onLogin: () => void;
   onOpenRecovery: () => void;
+  isLoading: boolean;
 }) => (
   <div className="fixed inset-0 z-[85] bg-black/75 backdrop-blur-sm flex items-center justify-center px-4">
     <div className="w-full max-w-md rounded-2xl border border-gold/25 bg-wood-dark p-6 md:p-7 card-shadow">
       <h2 className="vintage-title text-2xl text-gold mb-3">Accesso Admin</h2>
       <p className="text-beige/80 text-sm leading-relaxed mb-5">
-        Inserisci email e password tramite il login Netlify per entrare nel pannello di gestione menu.
+        Inserisci email e password per entrare nel pannello di gestione menu.
       </p>
 
-      {hasIdentity ? (
+      {isSupabaseReady ? (
         <div className="space-y-3">
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => onEmailChange(event.target.value)}
+            placeholder="Email admin"
+            className="w-full rounded-xl border border-gold/35 bg-wood-dark/60 px-3 py-2.5 text-sm text-beige placeholder:text-beige/40 focus:outline-none focus:ring-2 focus:ring-gold/45"
+            autoComplete="email"
+          />
+          <input
+            type="password"
+            value={password}
+            onChange={(event) => onPasswordChange(event.target.value)}
+            placeholder="Password"
+            className="w-full rounded-xl border border-gold/35 bg-wood-dark/60 px-3 py-2.5 text-sm text-beige placeholder:text-beige/40 focus:outline-none focus:ring-2 focus:ring-gold/45"
+            autoComplete="current-password"
+          />
           <button
-            onClick={onOpenLogin}
+            onClick={onLogin}
             className="w-full rounded-xl bg-gold text-wood-dark py-3 font-semibold uppercase tracking-wider text-sm hover:bg-accent-orange transition-colors"
-            disabled={!isAuthReady}
+            disabled={!isAuthReady || isLoading}
           >
-            {isAuthReady ? 'Apri Login' : 'Caricamento...'}
+            {isLoading ? 'Accesso...' : (isAuthReady ? 'Accedi' : 'Caricamento...')}
           </button>
           <button
             onClick={onOpenRecovery}
             className="w-full rounded-xl border border-gold/35 text-gold py-3 font-semibold uppercase tracking-wider text-sm hover:bg-gold/10 transition-colors"
-            disabled={!isAuthReady}
+            disabled={!isAuthReady || isLoading}
           >
             Reimposta Password
           </button>
         </div>
       ) : (
         <div className="rounded-xl border border-red-300/35 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-          Login non disponibile: il widget Netlify Identity non e stato caricato.
+          Login non disponibile: Supabase non configurato.
         </div>
       )}
 
@@ -1602,6 +1870,9 @@ export default function App() {
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
   const [searchQuery, setSearchQuery] = useState("");
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
@@ -1609,128 +1880,153 @@ export default function App() {
   const normalizedPath =
     typeof window !== 'undefined' ? window.location.pathname.replace(/\/+$/, '') || '/' : '';
 
-  const authHashParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.hash.replace(/^#/, '')) : null;
-  const authQueryParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-  const hasAuthToken = !!(
-    authHashParams?.get('invite_token') ||
-    authQueryParams?.get('invite_token') ||
-    authHashParams?.get('confirmation_token') ||
-    authQueryParams?.get('confirmation_token') ||
-    authHashParams?.get('recovery_token') ||
-    authQueryParams?.get('recovery_token') ||
-    authHashParams?.get('token') ||
-    authQueryParams?.get('token') ||
-    authHashParams?.get('type') === 'recovery' ||
-    authQueryParams?.get('type') === 'recovery'
-  );
-
   const isAdminRoute = typeof window !== 'undefined' && normalizedPath === '/peppoo7';
-  const hasIdentity = typeof window !== 'undefined' && !!window.netlifyIdentity;
+  const isSupabaseReady = isSupabaseConfigured();
+
+  const verifyAdmin = async (): Promise<boolean> => {
+    if (!supabase) {
+      return false;
+    }
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData.session) {
+      return false;
+    }
+
+    const { data: adminRow, error: adminError } = await supabase
+      .from('admins')
+      .select('id')
+      .eq('user_id', sessionData.session.user.id)
+      .maybeSingle();
+
+    return !adminError && !!adminRow;
+  };
 
   useEffect(() => {
-    const identity = window.netlifyIdentity;
-    if (!identity) {
-      console.warn('Netlify Identity widget not loaded');
+    if (!isSupabaseReady || !supabase) {
       setIsAuthReady(true);
+      setIsAuthenticated(false);
       return;
     }
 
-    try {
-      // Netlify widget auto-initializes on DOMContentLoaded.
-      // Calling init() again can destroy the token-triggered modal.
-      // We only bind the logic.
-      setIsAuthenticated(!!identity.currentUser());
-      console.log('Netlify Identity state checked successfully');
-    } catch (err) {
-      console.error('Failed to check Netlify Identity:', err);
-    }
-    setIsAuthReady(true);
-    
-    // Netlify Identity widget automatically reads `#invite_token` and `#recovery_token` and pops up natively.
-    // If the user already has session and route is admin, open admin immediately.
-    if (identity.currentUser() && isAdminRoute) {
-      setIsAdminOpen(true);
-    }
+    let isMounted = true;
 
-    identity.on('login', () => {
-      setIsAuthenticated(true);
+    const bootstrapAuth = async () => {
+      const isAdmin = await verifyAdmin();
+      if (!isMounted) {
+        return;
+      }
+
+      setIsAuthenticated(isAdmin);
+      setIsAuthReady(true);
       if (isAdminRoute) {
-        setIsAdminOpen(true);
+        setIsAdminOpen(isAdmin);
+      }
+    };
+
+    bootstrapAuth();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!isMounted) {
+        return;
+      }
+
+      if (!session) {
+        setIsAuthenticated(false);
+        setIsAdminOpen(false);
+        return;
+      }
+
+      const { data: adminRow, error: adminError } = await supabase
+        .from('admins')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      const isAdmin = !adminError && !!adminRow;
+      if (!isMounted) {
+        return;
+      }
+
+      setIsAuthenticated(isAdmin);
+      if (isAdminRoute) {
+        setIsAdminOpen(isAdmin);
       }
     });
 
-    identity.on('logout', () => {
-      setIsAuthenticated(false);
-      setIsAdminOpen(false);
-    });
-  }, [isAdminRoute]);
+    return () => {
+      isMounted = false;
+      listener.subscription.unsubscribe();
+    };
+  }, [isAdminRoute, isSupabaseReady]);
 
-  useEffect(() => {
-    if (!isAuthReady || !isAdminRoute || isAuthenticated || hasAuthToken) return;
-    const identity = window.netlifyIdentity;
-    if (identity && !identity.currentUser()) {
-       identity.open('login');
-    }
-  }, [isAuthReady, isAdminRoute, isAuthenticated, hasAuthToken]);
-
-  const openAdminLogin = () => {
-    const identity = window.netlifyIdentity;
-    if (!identity) {
-      console.error('Netlify Identity widget not available');
-      alert('Login non disponibile. Ricarica la pagina.');
+  const openAdminLogin = async () => {
+    if (!isSupabaseReady || !supabase) {
+      alert('Supabase non configurato. Imposta VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.');
       return;
     }
-    
-    console.log('Opening Netlify Identity login form');
-    identity.open('login');
+
+    if (!adminEmail || !adminPassword) {
+      alert('Inserisci email e password.');
+      return;
+    }
+
+    setIsAuthLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({ email: adminEmail, password: adminPassword });
+    setIsAuthLoading(false);
+
+    if (error) {
+      alert('Credenziali non valide.');
+      return;
+    }
+
+    const isAdmin = await verifyAdmin();
+    if (!isAdmin) {
+      await supabase.auth.signOut();
+      alert('Utente autenticato ma non autorizzato come admin.');
+      return;
+    }
+
+    setIsAuthenticated(true);
+    setIsAdminOpen(true);
   };
 
-  const openAdminRecovery = () => {
-    const identity = window.netlifyIdentity;
-    if (!identity) {
-      alert('Recupero password non disponibile. Ricarica la pagina.');
+  const openAdminRecovery = async () => {
+    if (!isSupabaseReady || !supabase) {
+      alert('Supabase non configurato.');
       return;
     }
 
-    identity.open('recovery');
+    if (!adminEmail) {
+      alert('Inserisci prima la tua email admin.');
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(adminEmail, {
+      redirectTo: `${window.location.origin}/peppoo7`,
+    });
+
+    if (error) {
+      alert('Invio email di recupero fallito.');
+      return;
+    }
+
+    alert('Email di recupero inviata. Controlla la tua casella di posta.');
   };
 
   useEffect(() => {
     const fetchMenu = async () => {
       try {
-        const res = await fetch('/.netlify/functions/menu?t=' + new Date().getTime());
-        if (!res.ok) {
-          console.warn('Remote menu fetch failed with status', res.status, '– using local MENU_DATA.');
-          setMenuData(normalizeMenuDataForPiadine(MENU_DATA));
-          return;
-        }
-
-        const contentType = res.headers.get('content-type') || '';
-        if (!contentType.toLowerCase().includes('application/json')) {
-          console.warn('Remote menu endpoint did not return JSON. Using local MENU_DATA fallback.');
-          setMenuData(normalizeMenuDataForPiadine(MENU_DATA));
-          return;
-        }
-
-        const parsed = await res.json();
-        if (parsed === null) {
-          // Blob is empty – first deploy, use local data as-is.
-          console.info('Remote menu Blob is empty. Using local MENU_DATA.');
-          setMenuData(normalizeMenuDataForPiadine(MENU_DATA));
-          return;
-        }
-
-        if (isValidRemoteMenuData(parsed)) {
-          // Merge: remote categories override local ones by ID; new local categories fill gaps.
-          const merged = mergeRemoteWithLocal(parsed);
+        const remoteMenu = await fetchMenuFromSupabase();
+        if (remoteMenu && isValidRemoteMenuData(remoteMenu)) {
+          const merged = mergeRemoteWithLocal(remoteMenu);
           setMenuData(normalizeMenuDataForPiadine(merged));
           return;
         }
 
-        console.warn('Remote menu payload is invalid. Using local MENU_DATA fallback.');
         setMenuData(normalizeMenuDataForPiadine(MENU_DATA));
       } catch (err) {
-        console.error('Failed to load remote menu', err);
+        console.error('Failed to load remote menu from Supabase', err);
         setMenuData(normalizeMenuDataForPiadine(MENU_DATA));
       }
     };
@@ -1806,10 +2102,8 @@ export default function App() {
   };
 
   const logoutAdmin = () => {
-    const identity = window.netlifyIdentity;
-    if (identity) {
-      identity.logout();
-      return;
+    if (supabase) {
+      supabase.auth.signOut();
     }
     setIsAuthenticated(false);
     setIsAdminOpen(false);
@@ -1881,32 +2175,12 @@ export default function App() {
         onSave={async (nextData) => {
           const normalizedData = normalizeMenuDataForPiadine(nextData);
           setMenuData(normalizedData);
-          try {
-            const token = await window.netlifyIdentity?.currentUser()?.jwt();
-            const res = await fetch('/.netlify/functions/menu', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-              },
-              body: JSON.stringify(normalizedData)
-            });
-            if (res.ok) {
-              alert('✅ Nuovo menù pubblicato istantaneamente per tutti i clienti!');
-            } else {
-              let errorMsg = 'Salvataggio Cloud fallito (' + res.status + ')';
-              try {
-                const errData = await res.json();
-                if (errData.error) errorMsg += ': ' + errData.error;
-                if (errData.details) errorMsg += '\nDettagli: ' + errData.details;
-              } catch (e) {
-                // Ignore parse error
-              }
-              alert('Attenzione: ' + errorMsg + '\n\nSe hai inserito immagini grandi, prova a usare URL invece di caricare dal dispositivo.');
-            }
-          } catch (e) {
-            console.error(e);
-            alert('Errore di connessione server durante il salvataggio.');
+          const result = await syncMenuToSupabase(normalizedData);
+
+          if (result.ok) {
+            alert('✅ Nuovo menù pubblicato istantaneamente per tutti i clienti!');
+          } else {
+            alert(`Attenzione: salvataggio cloud fallito. ${result.error || ''}`);
           }
         }}
         onResetDefaults={() => {
@@ -1923,9 +2197,14 @@ export default function App() {
       {isAdminRoute && !isAuthenticated && (
         <AdminAccessGate
           isAuthReady={isAuthReady}
-          hasIdentity={hasIdentity}
-          onOpenLogin={openAdminLogin}
+          isSupabaseReady={isSupabaseReady}
+          email={adminEmail}
+          password={adminPassword}
+          onEmailChange={setAdminEmail}
+          onPasswordChange={setAdminPassword}
+          onLogin={openAdminLogin}
           onOpenRecovery={openAdminRecovery}
+          isLoading={isAuthLoading}
         />
       )}
 
