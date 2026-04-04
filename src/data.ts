@@ -27,6 +27,7 @@ export interface Product {
   format?: string;
   vegan?: boolean;
   soldOut?: boolean;
+  descriptions?: string[];
 }
 
 export const PIADINA_ADDON_GROUPS: ProductAddonGroup[] = [

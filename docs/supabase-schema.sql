@@ -20,6 +20,7 @@ create table if not exists public.products (
   category_id text not null references public.categories(id) on delete cascade,
   name text not null,
   description text not null default '',
+  descriptions text[] not null default '{}'::text[],
   price text,
   image text not null default '',
   format text,
@@ -29,6 +30,9 @@ create table if not exists public.products (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.products
+  add column if not exists descriptions text[] not null default '{}'::text[];
 
 create table if not exists public.product_prices (
   id uuid primary key default uuid_generate_v4(),

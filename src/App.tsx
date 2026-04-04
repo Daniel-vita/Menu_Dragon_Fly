@@ -17,7 +17,10 @@ import {
   Phone,
   AlertCircle
 } from 'lucide-react';
-import { MENU_DATA, Category, Product, ProductAddon, ProductAddonGroup, PIADINA_ADDON_GROUPS, SERVICE_CHARGE, CATEGORY_IMAGE_FOLDERS } from './data';
+import { MENU_DATA, Category, Product, SERVICE_CHARGE } from './data';
+import { AdminPanel } from './components/admin/AdminPanel';
+import { AdminAccessGate } from './components/admin/AdminAccessGate';
+import { cloneMenuData, normalizeMenuDataForPiadine } from './components/admin/adminUtils';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 
 const MENU_STORAGE_KEY = 'dragonfly-menu-data-v1';
@@ -25,65 +28,21 @@ const IMAGE_UPLOAD_HELPER_URL = 'https://postimages.org/';
 const TAKEAWAY_PHONE_DISPLAY = '0825 194 8323';
 const TAKEAWAY_PHONE_HREF = 'tel:+3908251948323';
 
-const cloneMenuData = (data: Category[]): Category[] => JSON.parse(JSON.stringify(data));
+const withTimeout = <T,>(promise: PromiseLike<T>, ms: number): Promise<T> =>
+  new Promise<T>((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error('timeout'));
+    }, ms);
 
-const isUploadedImage = (src?: string): boolean => !!src && src.startsWith('data:image/');
-
-const createId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-
-const clonePiadinaAddonGroups = (): ProductAddonGroup[] =>
-  PIADINA_ADDON_GROUPS.map((group) => ({
-    ...group,
-    options: group.options.map((option) => ({ ...option })),
-  }));
-
-const normalizePiadinaAddonGroups = (product: Product): ProductAddonGroup[] => {
-  if (product.addonGroups?.length) {
-    return product.addonGroups.map((group) => ({
-      id: group.id,
-      name: group.name,
-      options: (group.options || []).map((option) => ({ ...option })),
-    }));
-  }
-
-  const groups = clonePiadinaAddonGroups();
-  const fallbackAddons = product.addons || [];
-  if (!fallbackAddons.length) {
-    return groups;
-  }
-
-  const matchers: Record<string, RegExp> = {
-    affettati: /(pancetta|speck|mortadella|prosciutto|salame|bresaola)/i,
-    carne: /(hamburger|salsiccia|porchetta|cotechino|pollo|wurstel)/i,
-    formaggi: /(squacquerone|mozzarella|scamorza|formagg|gorgonzola|stracchino|brie)/i,
-    verdure: /(rucola|peperoni|cipolla|verdur|zucchine|insalata|pomodoro|melanzane|funghi)/i,
-    salse: /(salsa|maionese|ketchup|bbq|senape|piccant|yogurt)/i,
-  };
-
-  fallbackAddons.forEach((addon) => {
-    const groupId = Object.entries(matchers).find(([, regex]) => regex.test(addon.name))?.[0] || 'salse';
-    const targetGroup = groups.find((group) => group.id === groupId);
-    if (targetGroup) {
-      targetGroup.options.push({ ...addon });
-    }
-  });
-
-  return groups;
-};
-
-const normalizeMenuDataForPiadine = (data: Category[]): Category[] =>
-  data.map((category) => {
-    if (category.id !== 'piadine') {
-      return category;
-    }
-
-    return {
-      ...category,
-      products: category.products.map((product) => ({
-        ...product,
-        addonGroups: normalizePiadinaAddonGroups(product),
-      })),
-    };
+    Promise.resolve(promise)
+      .then((value) => {
+        clearTimeout(timeoutId);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      });
   });
 
 const isValidRemoteMenuData = (value: unknown): value is Category[] =>
@@ -146,6 +105,7 @@ type DbProduct = {
   id: string;
   name: string;
   description: string | null;
+  descriptions?: string[] | null;
   price: string | null;
   image: string | null;
   format: string | null;
@@ -165,6 +125,11 @@ type DbCategory = {
   sort_order: number | null;
   products?: DbProduct[];
 };
+
+const normalizeDescriptions = (descriptions?: Array<string | null | undefined> | null): string[] =>
+  (descriptions || [])
+    .map((description) => (description || '').trim())
+    .filter(Boolean);
 
 const normalizeAddonGroupId = (productId: string, groupId: string): string => `${productId}__${groupId}`;
 
@@ -193,6 +158,7 @@ const mapDbToMenuData = (categories: DbCategory[]): Category[] =>
           id: product.id,
           name: product.name,
           description: product.description || '',
+          descriptions: normalizeDescriptions(product.descriptions),
           price: product.price || undefined,
           image: product.image || '',
           format: product.format || undefined,
@@ -236,7 +202,7 @@ const fetchMenuFromSupabase = async (): Promise<Category[] | null> => {
     .select(`
       id, name, icon, image, sort_order,
       products (
-        id, name, description, price, image, format, vegan, sold_out, sort_order,
+        id, name, description, descriptions, price, image, format, vegan, sold_out, sort_order,
         product_prices ( label, value, position ),
         product_allergens ( allergen, position ),
         addon_groups (
@@ -294,6 +260,7 @@ const syncMenuToSupabase = async (data: Category[]): Promise<{ ok: boolean; erro
         category_id: category.id,
         name: product.name,
         description: product.description || '',
+        descriptions: normalizeDescriptions(product.descriptions),
         price: product.price || null,
         image: product.image || '',
         format: product.format || null,
@@ -340,38 +307,38 @@ const syncMenuToSupabase = async (data: Category[]): Promise<{ ok: boolean; erro
     });
   });
 
-  const { error: wipeCategoriesError } = await supabase.from('categories').delete().neq('id', '__none__');
+  const { error: wipeCategoriesError } = await supabase!.from('categories').delete().neq('id', '__none__');
   if (wipeCategoriesError) {
     return { ok: false, error: wipeCategoriesError.message };
   }
 
   if (categoriesPayload.length > 0) {
-    const { error } = await supabase.from('categories').insert(categoriesPayload);
+    const { error } = await supabase!.from('categories').insert(categoriesPayload);
     if (error) return { ok: false, error: error.message };
   }
 
   if (productsPayload.length > 0) {
-    const { error } = await supabase.from('products').insert(productsPayload);
+    const { error } = await supabase!.from('products').insert(productsPayload);
     if (error) return { ok: false, error: error.message };
   }
 
   if (pricesPayload.length > 0) {
-    const { error } = await supabase.from('product_prices').insert(pricesPayload);
+    const { error } = await supabase!.from('product_prices').insert(pricesPayload);
     if (error) return { ok: false, error: error.message };
   }
 
   if (allergensPayload.length > 0) {
-    const { error } = await supabase.from('product_allergens').insert(allergensPayload);
+    const { error } = await supabase!.from('product_allergens').insert(allergensPayload);
     if (error) return { ok: false, error: error.message };
   }
 
   if (addonGroupsPayload.length > 0) {
-    const { error } = await supabase.from('addon_groups').insert(addonGroupsPayload);
+    const { error } = await supabase!.from('addon_groups').insert(addonGroupsPayload);
     if (error) return { ok: false, error: error.message };
   }
 
   if (addonOptionsPayload.length > 0) {
-    const { error } = await supabase.from('addon_options').insert(addonOptionsPayload);
+    const { error } = await supabase!.from('addon_options').insert(addonOptionsPayload);
     if (error) return { ok: false, error: error.message };
   }
 
@@ -678,6 +645,9 @@ const ProductCard = ({
   }, [product.id]);
 
   const addonGroups = product.addonGroups || [];
+  const extraDescriptions = Array.isArray(product.descriptions)
+    ? product.descriptions.map((description) => description.trim()).filter(Boolean)
+    : [];
 
   if (compactNoImage) {
     return (
@@ -710,6 +680,16 @@ const ProductCard = ({
           {(!showCompactMultiPrices && displayPrice) && <span className="text-gold font-bold text-lg whitespace-nowrap">{displayPrice}</span>}
         </div>
 
+        {extraDescriptions.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {extraDescriptions.map((description, i) => (
+              <span key={`${description}-${i}`} className="inline-flex items-center gap-1 rounded-full border border-gold/25 bg-wood-dark/50 px-3 py-1 text-xs font-semibold text-beige/90">
+                {description}
+              </span>
+            ))}
+          </div>
+        )}
+
         {showCompactMultiPrices && (
           <div className="flex flex-wrap gap-2 mt-3">
             {pricedEntries.map((p, i) => (
@@ -720,69 +700,70 @@ const ProductCard = ({
             ))}
           </div>
         )}
+
         {flavorEntries.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-3">
             {flavorEntries.map((flavor, i) => (
               <span key={i} className="inline-flex items-center gap-1 rounded-full border border-gold/25 bg-wood-dark/50 px-3 py-1 text-xs font-semibold text-beige/90">
-                
                 {flavor.label}
               </span>
             ))}
           </div>
         )}
+
         {addonGroups.length > 0 && (
-  <div className="mt-4 rounded-xl border border-gold/30 bg-gradient-to-br from-wood-dark/60 to-wood-medium/20 p-3">
-    <div className="flex items-center gap-2 mb-2">
-      <div className="h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent flex-1" />
-      <p className="text-[10px] text-gold uppercase font-black tracking-[0.2em] px-2">Aggiunte e Variazioni</p>
-      <div className="h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent flex-1" />
-    </div>
+          <div className="mt-4 rounded-xl border border-gold/30 bg-gradient-to-br from-wood-dark/60 to-wood-medium/20 p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent flex-1" />
+              <p className="text-[10px] text-gold uppercase font-black tracking-[0.2em] px-2">Aggiunte e Variazioni</p>
+              <div className="h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent flex-1" />
+            </div>
 
-    <div className="grid gap-1.5 sm:grid-cols-2">
-      {addonGroups.map((group) => (
-        <div key={group.id} className="space-y-1">
-          <button
-            onClick={() => setOpenAddonGroupId((prev) => (prev === group.id ? null : group.id))}
-            className={`w-full px-3 py-2 text-xs uppercase tracking-wider font-bold rounded-xl border transition-all duration-300 flex items-center justify-between ${
-              openAddonGroupId === group.id
-                ? 'border-gold text-gold bg-gold/15'
-                : 'border-gold/30 text-cream bg-wood-dark/70'
-            }`}
-          >
-            <span>{group.name}</span>
-            <span className="text-base leading-none font-light">{openAddonGroupId === group.id ? '−' : '+'}</span>
-          </button>
-        </div>
-      ))}
-    </div>
-
-    <AnimatePresence mode="wait">
-      {openAddonGroupId && (
-        <motion.div
-          key={openAddonGroupId}
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: 'auto', opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          className="overflow-hidden"
-        >
-          <div className="bg-black/40 rounded-xl p-3 border border-gold/20 mt-2">
-            <p className="text-[10px] text-gold uppercase font-black mb-2 tracking-[0.15em] border-b border-gold/20 pb-1.5">
-              {addonGroups.find((g) => g.id === openAddonGroupId)?.name}
-            </p>
-            <div className="grid gap-1.5">
-              {(addonGroups.find((g) => g.id === openAddonGroupId)?.options || []).map((opt, i) => (
-                <div key={i} className="flex items-center justify-between text-sm py-0.5">
-                  <span className="text-white font-medium">{opt.name}</span>
-                  <span className="text-gold font-bold bg-gold/10 px-2 py-0.5 rounded-md text-xs">{opt.price}</span>
+            <div className="grid gap-1.5 sm:grid-cols-2">
+              {addonGroups.map((group) => (
+                <div key={group.id} className="space-y-1">
+                  <button
+                    onClick={() => setOpenAddonGroupId((prev) => (prev === group.id ? null : group.id))}
+                    className={`w-full px-3 py-2 text-xs uppercase tracking-wider font-bold rounded-xl border transition-all duration-300 flex items-center justify-between ${
+                      openAddonGroupId === group.id
+                        ? 'border-gold text-gold bg-gold/15'
+                        : 'border-gold/30 text-cream bg-wood-dark/70'
+                    }`}
+                  >
+                    <span>{group.name}</span>
+                    <span className="text-base leading-none font-light">{openAddonGroupId === group.id ? '−' : '+'}</span>
+                  </button>
                 </div>
               ))}
             </div>
+
+            <AnimatePresence mode="wait">
+              {openAddonGroupId && (
+                <motion.div
+                  key={openAddonGroupId}
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="bg-black/40 rounded-xl p-3 border border-gold/20 mt-2">
+                    <p className="text-[10px] text-gold uppercase font-black mb-2 tracking-[0.15em] border-b border-gold/20 pb-1.5">
+                      {addonGroups.find((g) => g.id === openAddonGroupId)?.name}
+                    </p>
+                    <div className="grid gap-1.5">
+                      {(addonGroups.find((g) => g.id === openAddonGroupId)?.options || []).map((opt, i) => (
+                        <div key={i} className="flex items-center justify-between text-sm py-0.5">
+                          <span className="text-white font-medium">{opt.name}</span>
+                          <span className="text-gold font-bold bg-gold/10 px-2 py-0.5 rounded-md text-xs">{opt.price}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  </div>
-)}
+        )}
       </motion.div>
     );
   }
@@ -867,6 +848,16 @@ const ProductCard = ({
           )}
         </div>
         <p className="text-beige/70 text-sm leading-relaxed mb-4">{product.description}</p>
+
+        {extraDescriptions.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {extraDescriptions.map((description, i) => (
+              <span key={`${description}-${i}`} className="inline-flex items-center gap-1 rounded-full border border-gold/25 bg-wood-dark/50 px-3 py-1 text-xs font-semibold text-beige/90">
+                {description}
+              </span>
+            ))}
+          </div>
+        )}
         
         <AnimatePresence>
           {showAllergens && product.allergens && (
@@ -1100,702 +1091,6 @@ const Sidebar = ({ isOpen, onClose, categories, onCategorySelect, onContactClick
   );
 };
 
-const AdminPanel = ({
-  isOpen,
-  onClose,
-  categories,
-  onSave,
-  onResetDefaults,
-  onLogout,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  categories: Category[];
-  onSave: (nextData: Category[]) => void;
-  onResetDefaults: () => void;
-  onLogout: () => void;
-}) => {
-  const [draft, setDraft] = useState<Category[]>([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState('');
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const nextDraft = cloneMenuData(categories);
-    setDraft(nextDraft);
-    setSelectedCategoryId((prev) => prev || nextDraft[0]?.id || '');
-  }, [isOpen, categories]);
-
-  const selectedCategory = useMemo(
-    () => draft.find((cat) => cat.id === selectedCategoryId) || null,
-    [draft, selectedCategoryId]
-  );
-
-  const isPiadineCategory = selectedCategory?.id === 'piadine';
-
-  const updateCategoryField = (field: 'name' | 'image', value: string) => {
-    setDraft((prev) => prev.map((cat) => (cat.id === selectedCategoryId ? { ...cat, [field]: value } : cat)));
-  };
-
-  const updateProductField = (productId: string, field: keyof Product, value: any) => {
-    setDraft((prev) =>
-      prev.map((cat) => {
-        if (cat.id !== selectedCategoryId) return cat;
-        return {
-          ...cat,
-          products: cat.products.map((product) => {
-            if (product.id !== productId) return product;
-
-            if (field === 'allergens') {
-              const allergens = (value as string)
-                .split(',')
-                .map((item) => item.trim())
-                .filter(Boolean);
-              return { ...product, allergens };
-            }
-
-            return { ...product, [field]: value };
-          }),
-        };
-      })
-    );
-  };
-
-  const addCategory = () => {
-    const newCategory: Category = {
-      id: createId('cat'),
-      name: 'Nuova Categoria',
-      icon: '🍽️',
-      image: '',
-      products: [],
-    };
-
-    setDraft((prev) => [...prev, newCategory]);
-    setSelectedCategoryId(newCategory.id);
-  };
-
-  const deleteCategory = () => {
-    if (!selectedCategoryId) return;
-    setDraft((prev) => {
-      const next = prev.filter((cat) => cat.id !== selectedCategoryId);
-      setSelectedCategoryId(next[0]?.id || '');
-      return next;
-    });
-  };
-
-  const addProduct = () => {
-    if (!selectedCategoryId) return;
-
-    const currentCategory = draft.find((cat) => cat.id === selectedCategoryId);
-    if (currentCategory?.id === 'piadine' && currentCategory.products.length >= 1) {
-      return;
-    }
-
-    const newProduct: Product = {
-      id: createId('prod'),
-      name: 'Nuovo Prodotto',
-      description: 'Descrizione prodotto',
-      price: '0.00€',
-      image: '',
-      allergens: [],
-      vegan: false,
-      soldOut: false,
-      addons: [],
-      addonGroups: selectedCategoryId === 'piadine' ? clonePiadinaAddonGroups() : undefined,
-    };
-
-    setDraft((prev) =>
-      prev.map((cat) => (cat.id === selectedCategoryId ? { ...cat, products: [...cat.products, newProduct] } : cat))
-    );
-  };
-
-  const deleteProduct = (productId: string) => {
-    if (isPiadineCategory && selectedCategory?.products.length === 1) {
-      return;
-    }
-
-    setDraft((prev) =>
-      prev.map((cat) =>
-        cat.id === selectedCategoryId
-          ? { ...cat, products: cat.products.filter((product) => product.id !== productId) }
-          : cat
-      )
-    );
-  };
-
-  const moveProduct = (productId: string, direction: 'up' | 'down') => {
-    setDraft((prev) =>
-      prev.map((cat) => {
-        if (cat.id !== selectedCategoryId) return cat;
-
-        const currentIndex = cat.products.findIndex((product) => product.id === productId);
-        if (currentIndex === -1) return cat;
-
-        const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-        if (targetIndex < 0 || targetIndex >= cat.products.length) return cat;
-
-        const nextProducts = [...cat.products];
-        const [moved] = nextProducts.splice(currentIndex, 1);
-        nextProducts.splice(targetIndex, 0, moved);
-
-        return { ...cat, products: nextProducts };
-      })
-    );
-  };
-
-  const addProductAddonOption = (productId: string, groupId: string) => {
-    setDraft((prev) =>
-      prev.map((cat) => {
-        if (cat.id !== selectedCategoryId) return cat;
-        return {
-          ...cat,
-          products: cat.products.map((product) => {
-            if (product.id !== productId) return product;
-
-            const nextGroups = (product.addonGroups?.length ? product.addonGroups : clonePiadinaAddonGroups()).map((group) => {
-              if (group.id !== groupId) return group;
-              return {
-                ...group,
-                options: [...group.options, { name: 'Nuova aggiunta', price: '+0.50€' }],
-              };
-            });
-
-            return { ...product, addonGroups: nextGroups };
-          }),
-        };
-      })
-    );
-  };
-
-  const updateProductAddonOption = (
-    productId: string,
-    groupId: string,
-    optionIndex: number,
-    field: keyof ProductAddon,
-    value: string
-  ) => {
-    setDraft((prev) =>
-      prev.map((cat) => {
-        if (cat.id !== selectedCategoryId) return cat;
-        return {
-          ...cat,
-          products: cat.products.map((product) => {
-            if (product.id !== productId) return product;
-
-            const nextGroups = (product.addonGroups?.length ? product.addonGroups : clonePiadinaAddonGroups()).map((group) => {
-              if (group.id !== groupId) return group;
-              const nextOptions = [...group.options];
-              if (!nextOptions[optionIndex]) return group;
-              nextOptions[optionIndex] = { ...nextOptions[optionIndex], [field]: value };
-              return { ...group, options: nextOptions };
-            });
-
-            return { ...product, addonGroups: nextGroups };
-          }),
-        };
-      })
-    );
-  };
-
-  const deleteProductAddonOption = (productId: string, groupId: string, optionIndex: number) => {
-    setDraft((prev) =>
-      prev.map((cat) => {
-        if (cat.id !== selectedCategoryId) return cat;
-        return {
-          ...cat,
-          products: cat.products.map((product) => {
-            if (product.id !== productId) return product;
-
-            const nextGroups = (product.addonGroups?.length ? product.addonGroups : clonePiadinaAddonGroups()).map((group) => {
-              if (group.id !== groupId) return group;
-              const nextOptions = group.options.filter((_, i) => i !== optionIndex);
-              return { ...group, options: nextOptions };
-            });
-
-            return { ...product, addonGroups: nextGroups };
-          }),
-        };
-      })
-    );
-  };
-
-  const saveDraft = () => {
-    onSave(draft);
-    onClose();
-  };
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 z-[90]"
-            onClick={onClose}
-          />
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 20, opacity: 0 }}
-            className="fixed inset-3 md:inset-8 z-[95] bg-wood-dark border border-gold/20 rounded-2xl overflow-hidden flex flex-col"
-          >
-            <div className="px-4 md:px-6 py-3 border-b border-gold/15 flex items-center justify-between">
-              <h2 className="vintage-title text-gold text-xl md:text-2xl">Gestione Menu</h2>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={onLogout}
-                  className="px-3 py-1.5 border border-gold/25 rounded-lg text-xs uppercase tracking-wider text-beige hover:text-gold transition-colors"
-                >
-                  Logout
-                </button>
-                <button onClick={onClose} className="p-2 rounded-lg hover:bg-wood-light/20 transition-colors" aria-label="Chiudi pannello admin">
-                  <X className="w-5 h-5 text-gold" />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5">
-              <div className="flex flex-wrap gap-2 items-center">
-                <label className="text-xs uppercase tracking-widest text-gold/70">Categoria</label>
-                <select
-                  value={selectedCategoryId}
-                  onChange={(event) => setSelectedCategoryId(event.target.value)}
-                  className="bg-wood-medium/20 border border-gold/20 rounded-lg px-3 py-2 text-beige"
-                >
-                  {draft.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-                <button onClick={addCategory} className="px-3 py-2 border border-gold/30 rounded-lg text-gold text-sm hover:bg-gold/10 transition-colors">
-                  + Categoria
-                </button>
-                <button onClick={deleteCategory} className="px-3 py-2 border border-red-300/40 rounded-lg text-red-200 text-sm hover:bg-red-500/10 transition-colors">
-                  Elimina Categoria
-                </button>
-              </div>
-
-              {selectedCategory && (
-                <div className="space-y-4">
-                  <div className="grid md:grid-cols-2 gap-3">
-                    <input
-                      value={selectedCategory.name}
-                      onChange={(event) => updateCategoryField('name', event.target.value)}
-                      className="flex-1 bg-wood-medium/20 border border-gold/20 rounded-lg px-3 py-2 text-beige"
-                      placeholder="Nome categoria"
-                    />
-                    <div className="md:col-span-2 flex flex-col gap-2 p-3 bg-wood-medium/10 rounded-xl border border-gold/20">
-                      <label className="text-xs uppercase tracking-widest text-gold/70">Immagine Categoria</label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          try {
-                            const compressed = await compressImage(file, 1400, 1400, 0.82);
-                            updateCategoryField('image', compressed);
-                          } catch (err) {
-                            console.error('Failed to compress image:', err);
-                            alert("Errore durante l'elaborazione dell'immagine.");
-                          }
-                        }}
-                        className="text-sm text-beige file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gold file:text-wood-dark hover:file:bg-accent-orange transition-colors"
-                      />
-                      <input
-                        value={selectedCategory.image}
-                        onChange={(event) => updateCategoryField('image', event.target.value)}
-                        className="bg-wood-medium/20 border border-gold/20 rounded-lg px-3 py-2 text-beige mt-2 text-xs"
-                        placeholder="Oppure inserisci URL immagine"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs uppercase tracking-widest text-gold/70">Prodotti ({selectedCategory.products.length})</p>
-                    <button
-                      onClick={addProduct}
-                      disabled={isPiadineCategory && selectedCategory.products.length >= 1}
-                      className="px-3 py-2 border border-gold/30 rounded-lg text-gold text-sm hover:bg-gold/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      {isPiadineCategory ? 'Solo 1 Piadina' : '+ Prodotto'}
-                    </button>
-                  </div>
-
-                  <div className="space-y-3">
-                    {selectedCategory.products.map((product, index) => {
-                      const colorClasses = [
-                        'border-indigo-500/40 bg-indigo-900/20',
-                        'border-emerald-500/40 bg-emerald-900/20',
-                        'border-amber-500/40 bg-amber-900/20',
-                        'border-rose-500/40 bg-rose-900/20',
-                        'border-cyan-500/40 bg-cyan-900/20',
-                        'border-fuchsia-500/40 bg-fuchsia-900/20'
-                      ][index % 6];
-                      return (
-                      <div key={product.id} className={`border rounded-xl p-3 md:p-4 space-y-3 ${colorClasses}`}>
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2">
-                            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-wood-dark/50 text-gold/80 text-xs font-bold border border-gold/20">{index + 1}</span>
-                            <p className="text-gold text-sm md:text-base font-bold uppercase tracking-wider">{product.name || 'Nuovo Prodotto'}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => moveProduct(product.id, 'up')}
-                              disabled={index === 0}
-                              className="px-2 py-1 text-xs border border-gold/30 rounded-md text-gold hover:bg-gold/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                              Su
-                            </button>
-                            <button
-                              onClick={() => moveProduct(product.id, 'down')}
-                              disabled={index === selectedCategory.products.length - 1}
-                              className="px-2 py-1 text-xs border border-gold/30 rounded-md text-gold hover:bg-gold/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                              Giu
-                            </button>
-                            <button
-                              onClick={() => deleteProduct(product.id)}
-                              disabled={isPiadineCategory && selectedCategory.products.length === 1}
-                              className="px-2 py-1 text-xs border border-red-300/40 rounded-md text-red-200 hover:bg-red-500/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                              Elimina
-                            </button>
-                          </div>
-                        </div>
-                        <input
-                          value={product.name}
-                          onChange={(event) => updateProductField(product.id, 'name', event.target.value)}
-                          className="w-full bg-wood-dark/40 border border-gold/15 rounded-lg px-3 py-2 text-beige"
-                          placeholder="Nome prodotto"
-                        />
-                        <textarea
-                          value={product.description}
-                          onChange={(event) => updateProductField(product.id, 'description', event.target.value)}
-                          className="w-full bg-wood-dark/40 border border-gold/15 rounded-lg px-3 py-2 text-beige min-h-[74px]"
-                          placeholder="Descrizione"
-                        />
-                        <input
-                          value={product.format || ''}
-                          onChange={(event) => updateProductField(product.id, 'format', event.target.value)}
-                          className="w-full bg-wood-dark/40 border border-gold/15 rounded-lg px-3 py-2 text-beige"
-                          placeholder="Formato (es. 33cl, 50cl)"
-                        />
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          <label className="flex items-center gap-2 rounded-lg border border-gold/15 bg-wood-dark/25 px-3 py-2 text-beige text-sm">
-                            <input
-                              type="checkbox"
-                              checked={!!product.vegan}
-                              onChange={(event) => updateProductField(product.id, 'vegan', event.target.checked)}
-                              className="h-4 w-4 accent-emerald-500"
-                            />
-                            Prodotto vegano (badge in alto a sinistra)
-                          </label>
-
-                          <label className="flex items-center gap-2 rounded-lg border border-red-300/30 bg-red-900/20 px-3 py-2 text-red-100 text-sm">
-                            <input
-                              type="checkbox"
-                              checked={!!product.soldOut}
-                              onChange={(event) => updateProductField(product.id, 'soldOut', event.target.checked)}
-                              className="h-4 w-4 accent-red-500"
-                            />
-                            Esaurito (mostra barra TERMINATO)
-                          </label>
-                        </div>
-
-                        <div className="flex flex-col gap-2 p-3 bg-wood-dark/20 rounded-xl border border-gold/10">
-                          <label className="text-xs uppercase tracking-widest text-gold/70">Immagine Prodotto</label>
-                          
-                          {/* Dropdown per immagini disponibili dalla cartella */}
-                          {CATEGORY_IMAGE_FOLDERS[selectedCategoryId] && CATEGORY_IMAGE_FOLDERS[selectedCategoryId].length > 0 && (
-                            <div className="flex flex-col gap-2">
-                              <label className="text-xs uppercase tracking-widest text-gold/50">Seleziona dalla cartella</label>
-                              <select
-                                value={product.image}
-                                onChange={(e) => updateProductField(product.id, 'image', e.target.value)}
-                                className="w-full bg-wood-dark/40 border border-gold/15 rounded-lg px-3 py-2 text-beige text-sm"
-                              >
-                                <option value="">-- Scegli immagine --</option>
-                                {CATEGORY_IMAGE_FOLDERS[selectedCategoryId].map((img) => {
-                                  const fileName = img.split('/').pop() || '';
-                                  return (
-                                    <option key={img} value={img}>
-                                      {fileName}
-                                    </option>
-                                  );
-                                })}
-                              </select>
-                            </div>
-                          )}
-                          
-                          <div className="border-t border-gold/10 pt-3">
-                            <label className="text-xs uppercase tracking-widest text-gold/50 mb-2 block">Oppure carica un file</label>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-                                try {
-                                  const compressed = await compressImage(file, 1400, 1400, 0.82);
-                                  updateProductField(product.id, 'image', compressed);
-                                } catch (err) {
-                                  console.error('Failed to compress image:', err);
-                                  alert("Errore durante l'elaborazione dell'immagine.");
-                                }
-                              }}
-                              className="text-sm text-beige file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gold file:text-wood-dark hover:file:bg-accent-orange transition-colors"
-                            />
-                          </div>
-                          
-                          <input
-                            value={product.image}
-                            onChange={(event) => updateProductField(product.id, 'image', event.target.value)}
-                            className="w-full bg-wood-dark/40 border border-gold/15 rounded-lg px-3 py-2 text-beige text-xs"
-                            placeholder="Oppure inserisci URL foto"
-                          />
-
-                          {product.image && (
-                            <div className="mt-2 rounded-xl border border-gold/15 overflow-hidden bg-gradient-to-br from-wood-medium/45 via-wood-dark/60 to-wood-dark/80 h-36">
-                              <img
-                                src={product.image}
-                                alt={`Anteprima ${product.name}`}
-                                className="w-full h-full object-cover"
-                                loading="lazy"
-                                decoding="async"
-                                referrerPolicy="no-referrer"
-                              />
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="space-y-3 mt-3 p-3 bg-wood-dark/20 rounded-xl border border-gold/10">
-                          <div className="flex flex-col gap-1">
-                            <label className="text-xs uppercase tracking-widest text-gold/70">Prezzo Unico</label>
-                            <input
-                              value={product.price || ''}
-                              onChange={(event) => {
-                                updateProductField(product.id, 'price', event.target.value);
-                                updateProductField(product.id, 'prices', undefined);
-                              }}
-                              className="w-full bg-wood-dark/40 border border-gold/15 rounded-lg px-3 py-2 text-beige"
-                              placeholder="Prezzo (es. 8.50€)"
-                              disabled={!!product.prices?.length}
-                            />
-                          </div>
-
-                          <div className="flex justify-between items-center mt-3 pt-3 border-t border-gold/10">
-                            <label className="text-xs uppercase tracking-widest text-gold/70">Formati Multipli (es. per cl)</label>
-                            <button
-                              onClick={() => {
-                                const currentPrices = product.prices || [];
-                                updateProductField(product.id, 'prices', [...currentPrices, { label: '33cl', value: '5.00€' }]);
-                                updateProductField(product.id, 'price', undefined);
-                              }}
-                              className="px-2 py-1 bg-gold/10 text-gold text-xs rounded border border-gold/20 hover:bg-gold/20 transition-colors"
-                            >
-                              + Formato
-                            </button>
-                          </div>
-                          
-                          {product.prices?.map((p, pIndex) => (
-                            <div key={pIndex} className="flex gap-2 items-center">
-                              <input
-                                value={p.label}
-                                onChange={(e) => {
-                                  const newPrices = [...(product.prices || [])];
-                                  newPrices[pIndex] = { ...newPrices[pIndex], label: e.target.value };
-                                  updateProductField(product.id, 'prices', newPrices);
-                                }}
-                                className="w-1/3 bg-wood-dark/40 border border-gold/15 rounded-lg px-2 py-1.5 text-beige text-sm"
-                                placeholder="es. 33cl"
-                              />
-                              <input
-                                value={p.value}
-                                onChange={(e) => {
-                                  const newPrices = [...(product.prices || [])];
-                                  newPrices[pIndex] = { ...newPrices[pIndex], value: e.target.value };
-                                  updateProductField(product.id, 'prices', newPrices);
-                                }}
-                                className="flex-1 bg-wood-dark/40 border border-gold/15 rounded-lg px-2 py-1.5 text-beige text-sm"
-                                placeholder="Prezzo"
-                              />
-                              <button
-                                onClick={() => {
-                                  const newPrices = (product.prices || []).filter((_, i) => i !== pIndex);
-                                  updateProductField(product.id, 'prices', newPrices.length ? newPrices : undefined);
-                                }}
-                                className="text-red-400 p-1 rounded hover:bg-red-500/20"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                        <input
-                          value={product.allergens?.join(', ') || ''}
-                          onChange={(event) => updateProductField(product.id, 'allergens', event.target.value)}
-                          className="w-full bg-wood-dark/40 border border-gold/15 rounded-lg px-3 py-2 text-beige"
-                          placeholder="Allergeni separati da virgola"
-                        />
-
-                        {isPiadineCategory && (
-                          <div className="space-y-3 mt-3 p-3 bg-wood-dark/20 rounded-xl border border-gold/10">
-                            <label className="text-xs uppercase tracking-widest text-gold/70">
-                              Aggiunte personalizzabili ({PIADINA_ADDON_GROUPS.length} menu)
-                            </label>
-
-                            {(product.addonGroups?.length ? product.addonGroups : PIADINA_ADDON_GROUPS).map((group) => (
-                              <div key={group.id} className="space-y-2 rounded-lg border border-gold/10 bg-wood-dark/20 p-2.5">
-                                <div className="flex justify-between items-center">
-                                  <p className="text-xs uppercase tracking-wider text-gold/80">{group.name}</p>
-                                  <button
-                                    onClick={() => addProductAddonOption(product.id, group.id)}
-                                    className="px-2 py-1 bg-gold/10 text-gold text-xs rounded border border-gold/20 hover:bg-gold/20 transition-colors"
-                                  >
-                                    + Aggiunta
-                                  </button>
-                                </div>
-
-                                {group.options.map((option, optionIndex) => (
-                                  <div key={optionIndex} className="flex gap-2 items-center">
-                                    <input
-                                      value={option.name}
-                                      onChange={(e) => updateProductAddonOption(product.id, group.id, optionIndex, 'name', e.target.value)}
-                                      className="flex-1 bg-wood-dark/40 border border-gold/15 rounded-lg px-2 py-1.5 text-beige text-sm"
-                                      placeholder="Nome aggiunta"
-                                    />
-                                    <input
-                                      value={option.price}
-                                      onChange={(e) => updateProductAddonOption(product.id, group.id, optionIndex, 'price', e.target.value)}
-                                      className="w-28 bg-wood-dark/40 border border-gold/15 rounded-lg px-2 py-1.5 text-beige text-sm"
-                                      placeholder="+1.00€"
-                                    />
-                                    <button
-                                      onClick={() => deleteProductAddonOption(product.id, group.id, optionIndex)}
-                                      className="text-red-400 p-1 rounded hover:bg-red-500/20"
-                                    >
-                                      <X className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                ))}
-
-                                {group.options.length === 0 && (
-                                  <p className="text-beige/55 text-xs italic">Nessuna aggiunta in questo gruppo.</p>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      );
-                    })}
-                    {selectedCategory.products.length === 0 && (
-                      <p className="text-beige/55 text-sm italic">Nessun prodotto in questa categoria.</p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="px-4 md:px-6 py-3 border-t border-gold/15 flex flex-wrap gap-2 justify-end">
-              <button
-                onClick={onResetDefaults}
-                className="px-3 py-2 border border-gold/20 rounded-lg text-beige/80 text-sm hover:bg-wood-light/20 transition-colors"
-              >
-                Ripristina Default
-              </button>
-              <button
-                onClick={saveDraft}
-                className="px-4 py-2 rounded-lg bg-gold text-wood-dark font-semibold text-sm hover:bg-accent-orange transition-colors"
-              >
-                Salva Modifiche
-              </button>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-};
-
-const AdminAccessGate = ({
-  isAuthReady,
-  isSupabaseReady,
-  email,
-  password,
-  onEmailChange,
-  onPasswordChange,
-  onLogin,
-  onOpenRecovery,
-  isLoading,
-}: {
-  isAuthReady: boolean;
-  isSupabaseReady: boolean;
-  email: string;
-  password: string;
-  onEmailChange: (value: string) => void;
-  onPasswordChange: (value: string) => void;
-  onLogin: () => void;
-  onOpenRecovery: () => void;
-  isLoading: boolean;
-}) => (
-  <div className="fixed inset-0 z-[85] bg-black/75 backdrop-blur-sm flex items-center justify-center px-4">
-    <div className="w-full max-w-md rounded-2xl border border-gold/25 bg-wood-dark p-6 md:p-7 card-shadow">
-      <h2 className="vintage-title text-2xl text-gold mb-3">Accesso Admin</h2>
-      <p className="text-beige/80 text-sm leading-relaxed mb-5">
-        Inserisci email e password per entrare nel pannello di gestione menu.
-      </p>
-
-      {isSupabaseReady ? (
-        <div className="space-y-3">
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => onEmailChange(event.target.value)}
-            placeholder="Email admin"
-            className="w-full rounded-xl border border-gold/35 bg-wood-dark/60 px-3 py-2.5 text-sm text-beige placeholder:text-beige/40 focus:outline-none focus:ring-2 focus:ring-gold/45"
-            autoComplete="email"
-          />
-          <input
-            type="password"
-            value={password}
-            onChange={(event) => onPasswordChange(event.target.value)}
-            placeholder="Password"
-            className="w-full rounded-xl border border-gold/35 bg-wood-dark/60 px-3 py-2.5 text-sm text-beige placeholder:text-beige/40 focus:outline-none focus:ring-2 focus:ring-gold/45"
-            autoComplete="current-password"
-          />
-          <button
-            onClick={onLogin}
-            className="w-full rounded-xl bg-gold text-wood-dark py-3 font-semibold uppercase tracking-wider text-sm hover:bg-accent-orange transition-colors"
-            disabled={!isAuthReady || isLoading}
-          >
-            {isLoading ? 'Accesso...' : (isAuthReady ? 'Accedi' : 'Caricamento...')}
-          </button>
-          <button
-            onClick={onOpenRecovery}
-            className="w-full rounded-xl border border-gold/35 text-gold py-3 font-semibold uppercase tracking-wider text-sm hover:bg-gold/10 transition-colors"
-            disabled={!isAuthReady || isLoading}
-          >
-            Reimposta Password
-          </button>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-red-300/35 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-          Login non disponibile: Supabase non configurato.
-        </div>
-      )}
-
-      <p className="mt-4 text-xs text-beige/55">
-        Se non hai mai impostato la password, premi "Reimposta Password" e usa il link email ricevuto.
-      </p>
-    </div>
-  </div>
-);
-
 const PrivacyPolicyModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => (
   <AnimatePresence>
     {isOpen && (
@@ -1888,18 +1183,26 @@ export default function App() {
       return false;
     }
 
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !sessionData.session) {
+    try {
+      const { data: sessionData, error: sessionError } = await withTimeout(supabase.auth.getSession(), 7000);
+      if (sessionError || !sessionData.session) {
+        return false;
+      }
+
+      const { data: adminRow, error: adminError } = await withTimeout(
+        supabase
+          .from('admins')
+          .select('id')
+          .eq('user_id', sessionData.session.user.id)
+          .maybeSingle(),
+        7000
+      );
+
+      return !adminError && !!adminRow;
+    } catch (error) {
+      console.error('verifyAdmin failed', error);
       return false;
     }
-
-    const { data: adminRow, error: adminError } = await supabase
-      .from('admins')
-      .select('id')
-      .eq('user_id', sessionData.session.user.id)
-      .maybeSingle();
-
-    return !adminError && !!adminRow;
   };
 
   useEffect(() => {
@@ -1910,6 +1213,14 @@ export default function App() {
     }
 
     let isMounted = true;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    // Timeout di emergenza: se Supabase non risponde entro 5 secondi, sblocca comunque il gate.
+    timeoutId = setTimeout(() => {
+      if (isMounted && !isAuthReady) {
+        setIsAuthReady(true);
+      }
+    }, 5000);
 
     const bootstrapAuth = async () => {
       const isAdmin = await verifyAdmin();
@@ -1919,6 +1230,9 @@ export default function App() {
 
       setIsAuthenticated(isAdmin);
       setIsAuthReady(true);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       if (isAdminRoute) {
         setIsAdminOpen(isAdmin);
       }
@@ -1926,7 +1240,7 @@ export default function App() {
 
     bootstrapAuth();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: listener } = supabase!.auth.onAuthStateChange(async (_event, session) => {
       if (!isMounted) {
         return;
       }
@@ -1937,13 +1251,22 @@ export default function App() {
         return;
       }
 
-      const { data: adminRow, error: adminError } = await supabase
-        .from('admins')
-        .select('id')
-        .eq('user_id', session.user.id)
-        .maybeSingle();
+      let isAdmin = false;
+      try {
+        const { data: adminRow, error: adminError } = await withTimeout(
+          supabase!
+            .from('admins')
+            .select('id')
+            .eq('user_id', session.user.id)
+            .maybeSingle(),
+          7000
+        );
+        isAdmin = !adminError && !!adminRow;
+      } catch (error) {
+        console.error('onAuthStateChange admin check failed', error);
+        isAdmin = false;
+      }
 
-      const isAdmin = !adminError && !!adminRow;
       if (!isMounted) {
         return;
       }
@@ -1956,6 +1279,9 @@ export default function App() {
 
     return () => {
       isMounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       listener.subscription.unsubscribe();
     };
   }, [isAdminRoute, isSupabaseReady]);
@@ -1972,23 +1298,32 @@ export default function App() {
     }
 
     setIsAuthLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: adminEmail, password: adminPassword });
-    setIsAuthLoading(false);
+    try {
+      const { error } = await withTimeout(
+        supabase.auth.signInWithPassword({ email: adminEmail, password: adminPassword }),
+        10000
+      );
+      if (error) {
+        alert(`Login fallito: ${error.message}`);
+        return;
+      }
 
-    if (error) {
-      alert('Credenziali non valide.');
-      return;
+      const isAdmin = await withTimeout(verifyAdmin(), 7000).catch(() => false);
+      if (!isAdmin) {
+        await supabase.auth.signOut();
+        alert('Utente autenticato ma non autorizzato come admin, oppure verifica admin in timeout. Controlla la tabella admins su Supabase.');
+        return;
+      }
+
+      setIsAuthenticated(true);
+      setIsAdminOpen(true);
+    } catch (error) {
+      console.error('openAdminLogin failed', error);
+      alert('Errore di connessione durante il login admin. Riprova tra qualche secondo.');
+    } finally {
+      setIsAuthLoading(false);
+      setIsAuthReady(true);
     }
-
-    const isAdmin = await verifyAdmin();
-    if (!isAdmin) {
-      await supabase.auth.signOut();
-      alert('Utente autenticato ma non autorizzato come admin.');
-      return;
-    }
-
-    setIsAuthenticated(true);
-    setIsAdminOpen(true);
   };
 
   const openAdminRecovery = async () => {
@@ -2002,7 +1337,7 @@ export default function App() {
       return;
     }
 
-    const { error } = await supabase.auth.resetPasswordForEmail(adminEmail, {
+    const { error } = await supabase!.auth.resetPasswordForEmail(adminEmail, {
       redirectTo: `${window.location.origin}/peppoo7`,
     });
 
@@ -2142,6 +1477,8 @@ export default function App() {
     );
   }, [currentCategory, searchQuery]);
 
+  const showAdminLauncher = isAdminRoute && isAuthenticated && !isAdminOpen;
+
   return (
     <div className="min-h-screen pb-0 relative">
       <div className="pointer-events-none fixed inset-0 z-0 bg-gradient-to-b from-wood-dark/30 via-wood-dark/10 to-wood-dark/40" />
@@ -2206,6 +1543,23 @@ export default function App() {
           onOpenRecovery={openAdminRecovery}
           isLoading={isAuthLoading}
         />
+      )}
+
+      {showAdminLauncher && (
+        <div className="fixed bottom-4 right-4 z-[86] flex gap-2">
+          <button
+            onClick={() => setIsAdminOpen(true)}
+            className="rounded-xl bg-gold px-4 py-2 text-sm font-semibold uppercase tracking-wider text-wood-dark shadow-lg hover:bg-accent-orange transition-colors"
+          >
+            Apri Admin
+          </button>
+          <button
+            onClick={logoutAdmin}
+            className="rounded-xl border border-gold/30 bg-wood-dark/80 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-beige hover:text-gold transition-colors"
+          >
+            Logout
+          </button>
+        </div>
       )}
 
       <main className="pt-16">
